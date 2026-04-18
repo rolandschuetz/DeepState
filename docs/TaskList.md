@@ -118,18 +118,18 @@ It preserves the checklist formatting and scope of the original architecture whi
 - [ ] Add replay tests verifying required state transitions (e.g. aligned -> soft drift -> recovery; aligned -> hard drift).
 
 **Phase 5: Progress, Explainability & Message Discipline**
-- [ ] Implement `EpisodeBuilder` to roll `ContextWindow`s up into 3-5 minute block episodes.
-- [ ] Implement V1 goal matching: associate aligned/supporting block time to declared tasks/hours with a confidence rating.
-- [ ] Persist `progress_estimates`, `interventions`, and `intervention_outcomes` so progress, prompts, and user responses are reviewable later.
-- [ ] Add progress risk detection for behind-pace work, repeated ambiguity on one goal, excessive support work, and heavy context switching during a critical block.
-- [ ] Implement `ExplainabilityGenerator` that references internal reason codes and spits out 2-3 human-readable bullets into the `classifications.explainability` field.
-- [ ] Include confidence rationale and a short "what would change this decision" debugging hint in the explainability payload for diagnostics surfaces.
-- [ ] Create a centralized `messages.ts` dictionary mapped to states. Hardcode positive reinforcement NLP prefixes strictly (`Locked.`, `Check.`, `Reset.`, `Back.`). No inline UI text is allowed elsewhere in the domain core.
-- [ ] Implement `InterventionEngine`: stays entirely silent on soft-drift; emits redirect notification candidate on sustained hard-drift.
-- [ ] Implement cooldown tracking: no hard-drift notification can repeat within a rolling 15-minute gap.
-- [ ] Implement "Observe-Only" Grace Period: for the first 50-100 ticks of a new installation, calculate the engine normally (updates UI colors), but actively mute the system from emitting native push notifications.
-- [ ] Unpack the Recovery Anchor: Upon exiting `hard_drift`, fetch `last_good_context` and emit a structured intervention via `messages.ts` (e.g., `"Back. Continue at [Figma - Checkout Design]."`).
-- [ ] Infer milestone-completion candidates from artifact/time evidence and surface them as confirm/dismiss actions only when confidence is strong enough.
+- [x] Implement `EpisodeBuilder` to roll `ContextWindow`s up into 3-5 minute block episodes.
+- [x] Implement V1 goal matching: associate aligned/supporting block time to declared tasks/hours with a confidence rating.
+- [x] Persist `progress_estimates`, `interventions`, and `intervention_outcomes` so progress, prompts, and user responses are reviewable later.
+- [x] Add progress risk detection for behind-pace work, repeated ambiguity on one goal, excessive support work, and heavy context switching during a critical block.
+- [x] Implement `ExplainabilityGenerator` that references internal reason codes and spits out 2-3 human-readable bullets into the `classifications.explainability` field.
+- [x] Include confidence rationale and a short "what would change this decision" debugging hint in the explainability payload for diagnostics surfaces.
+- [x] Create a centralized `messages.ts` dictionary mapped to states. Hardcode positive reinforcement NLP prefixes strictly (`Locked.`, `Check.`, `Reset.`, `Back.`). No inline UI text is allowed elsewhere in the domain core.
+- [x] Implement `InterventionEngine`: stays entirely silent on soft-drift; emits redirect notification candidate on sustained hard-drift.
+- [x] Implement cooldown tracking: no hard-drift notification can repeat within a rolling 15-minute gap.
+- [x] Implement "Observe-Only" Grace Period: for the first 50-100 ticks of a new installation, calculate the engine normally (updates UI colors), but actively mute the system from emitting native push notifications.
+- [x] Unpack the Recovery Anchor: Upon exiting `hard_drift`, fetch `last_good_context` and emit a structured intervention via `messages.ts` (e.g., `"Back. Continue at [Figma - Checkout Design]."`).
+- [x] Infer milestone-completion candidates from artifact/time evidence and surface them as confirm/dismiss actions only when confidence is strong enough.
 
 **Phase 6: Evening Flow & Reviewable Learning**
 - [x] Implement `EveningDebriefPacketBuilder` stringing together plans, episodes, drift blocks, pauses, and overrides.

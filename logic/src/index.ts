@@ -281,6 +281,9 @@ export type {
 
 export { messages } from "./interventions/messages.js";
 export {
+  handleNotificationActionCommand,
+} from "./interventions/intervention-outcomes.js";
+export {
   decideIntervention,
   HARD_DRIFT_COOLDOWN_MS,
   MILESTONE_CONFIDENCE_THRESHOLD,
