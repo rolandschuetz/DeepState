@@ -38,6 +38,12 @@ describe("normalizeScreenpipeRecordToEvidence", () => {
         typingSeconds: 96,
       },
       keywords: ["checkout", "payment"],
+      meetingHints: {
+        collaboratorHints: [],
+        hasAudioTranscript: false,
+        isLikelyMeeting: false,
+        reasons: [],
+      },
       observedAt: "2026-04-18T10:00:00.000Z",
       ocrText: "Stripe checkout docs",
       screenpipeRefs: {
@@ -96,6 +102,12 @@ describe("normalizeScreenpipeRecordToEvidence", () => {
         typingSeconds: 45,
       },
       keywords: [],
+      meetingHints: {
+        collaboratorHints: [],
+        hasAudioTranscript: false,
+        isLikelyMeeting: false,
+        reasons: [],
+      },
       observedAt: "2026-04-18T10:15:00.000Z",
       ocrText: null,
       screenpipeRefs: {
@@ -141,6 +153,12 @@ describe("normalizeScreenpipeRecordToEvidence", () => {
         typingSeconds: 0,
       },
       keywords: [],
+      meetingHints: {
+        collaboratorHints: [],
+        hasAudioTranscript: false,
+        isLikelyMeeting: false,
+        reasons: [],
+      },
       observedAt: null,
       ocrText: null,
       screenpipeRefs: {
@@ -157,6 +175,64 @@ describe("normalizeScreenpipeRecordToEvidence", () => {
         pathTokens: ["acme", "issue", "eng", "123", "fix", "auth", "flow"],
       },
       windowTitle: "Sprint Review - Linear",
+    });
+  });
+
+  it("tags likely meeting contexts from conferencing apps, transcripts, and collaborator hints", () => {
+    expect(
+      normalizeScreenpipeRecordToEvidence({
+        app_name: "Zoom",
+        audio_transcript: "Alice: can you hear me? Bob: yes.",
+        id: "record_4",
+        participant_names: ["Alice", "Bob"],
+        timestamp: "2026-04-18T10:20:00Z",
+        title: "Weekly Sync - Product",
+        typing_seconds: 3,
+        url: "https://zoom.us/j/123456",
+      }),
+    ).toEqual({
+      accessibilityText: null,
+      activitySummary: {
+        dominantSignal: "typing",
+        isActive: true,
+        totalInteractions: 3,
+      },
+      appIdentifier: "zoom",
+      appName: "Zoom",
+      interactionSummary: {
+        appSwitches: 0,
+        clickCount: 0,
+        scrollEvents: 0,
+        typingSeconds: 3,
+      },
+      keywords: [],
+      meetingHints: {
+        collaboratorHints: ["Alice", "Bob"],
+        hasAudioTranscript: true,
+        isLikelyMeeting: true,
+        reasons: [
+          "audio_heavy_low_typing",
+          "collaborator_hint",
+          "conferencing_app",
+          "meeting_keyword",
+        ],
+      },
+      observedAt: "2026-04-18T10:20:00.000Z",
+      ocrText: null,
+      screenpipeRefs: {
+        elementIds: [],
+        frameIds: [],
+        recordIds: ["record_4"],
+      },
+      source: "screenpipe_search",
+      uiText: [],
+      url: "https://zoom.us/j/123456",
+      urlSummary: {
+        host: "zoom.us",
+        normalizedUrl: "https://zoom.us/j/123456",
+        pathTokens: ["j", "123456"],
+      },
+      windowTitle: "Weekly Sync - Product",
     });
   });
 });

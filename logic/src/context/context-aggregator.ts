@@ -11,6 +11,17 @@ export type ContextWindowSummary = {
     appSwitches: number;
   };
   keywords: string[];
+  meetingContext: {
+    collaboratorHints: string[];
+    isLikelyMeeting: boolean;
+    reasons: Array<
+      | "audio_heavy_low_typing"
+      | "collaborator_hint"
+      | "conferencing_app"
+      | "meeting_keyword"
+    >;
+    titles: string[];
+  };
   screenpipeRefs: {
     elementIds: Array<number | string>;
     frameIds: Array<number | string>;
@@ -91,6 +102,19 @@ const summarizeWindow = (
     ),
   },
   keywords: unique(records.flatMap((record) => record.keywords)),
+  meetingContext: {
+    collaboratorHints: unique(
+      records.flatMap((record) => record.meetingHints.collaboratorHints),
+    ),
+    isLikelyMeeting: records.some((record) => record.meetingHints.isLikelyMeeting),
+    reasons: unique(records.flatMap((record) => record.meetingHints.reasons)).sort(),
+    titles: unique(
+      records
+        .filter((record) => record.meetingHints.isLikelyMeeting)
+        .map((record) => record.windowTitle)
+        .filter((value): value is string => value !== null),
+    ),
+  },
   screenpipeRefs: {
     elementIds: unique(records.flatMap((record) => record.screenpipeRefs.elementIds)),
     frameIds: unique(records.flatMap((record) => record.screenpipeRefs.frameIds)),

@@ -23,6 +23,12 @@ const createEvidence = (
     typingSeconds: 4,
   },
   keywords: ["checkout"],
+  meetingHints: {
+    collaboratorHints: [],
+    hasAudioTranscript: false,
+    isLikelyMeeting: false,
+    reasons: [],
+  },
   observedAt: "2026-04-18T09:00:00.000Z",
   ocrText: null,
   screenpipeRefs: {
@@ -71,6 +77,17 @@ describe("createContextAggregator", () => {
           typingSeconds: 10,
         },
         keywords: ["standup"],
+        meetingHints: {
+          collaboratorHints: ["Alice", "Bob"],
+          hasAudioTranscript: true,
+          isLikelyMeeting: true,
+          reasons: [
+            "audio_heavy_low_typing",
+            "collaborator_hint",
+            "conferencing_app",
+            "meeting_keyword",
+          ],
+        },
         observedAt: "2026-04-18T09:02:10.000Z",
         screenpipeRefs: { elementIds: [3], frameIds: [12], recordIds: ["record_3"] },
         uiText: ["daily standup"],
@@ -111,6 +128,12 @@ describe("createContextAggregator", () => {
           typingSeconds: 8,
         },
         keywords: ["checkout"],
+        meetingContext: {
+          collaboratorHints: [],
+          isLikelyMeeting: false,
+          reasons: [],
+          titles: [],
+        },
         urls: [
           "https://github.com/openai/repo/pull/1",
           "https://docs.stripe.com/payments",
@@ -147,6 +170,17 @@ describe("createContextAggregator", () => {
           typingSeconds: 10,
         },
         keywords: ["standup"],
+        meetingContext: {
+          collaboratorHints: ["Alice", "Bob"],
+          isLikelyMeeting: true,
+          reasons: [
+            "audio_heavy_low_typing",
+            "collaborator_hint",
+            "conferencing_app",
+            "meeting_keyword",
+          ],
+          titles: ["Slack | Team"],
+        },
         urls: [],
         windowTitles: ["Slack | Team"],
       },

@@ -24,6 +24,12 @@ const createEvidence = (
     typingSeconds: 0,
   },
   keywords: [],
+  meetingHints: {
+    collaboratorHints: [],
+    hasAudioTranscript: false,
+    isLikelyMeeting: false,
+    reasons: [],
+  },
   observedAt: "2026-04-18T10:00:00.000Z",
   ocrText: null,
   screenpipeRefs: {
