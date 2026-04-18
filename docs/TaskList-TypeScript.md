@@ -6,7 +6,7 @@ By architecting the software with a strict boundary—**the headless TypeScript 
 *Tech Stack: Node.js, TypeScript, Zod, better-sqlite3. Use local AI only for bounded, non-critical helpers. Design rule: fully deterministic by default. All system loops respect the top-level mode gate and run on exactly two unified timers (Fast Tick & Slow Tick).*
 
 **Phase 0: Contracts, Fixtures, and Health**
-- [ ] Initialize `logic/` Node+TS project with strict mode and `vitest`.
+- [x] Initialize `logic/` Node+TS project with strict mode and `vitest`.
 - [ ] Create companion workspace folders for `shared-contracts/`, `fixtures/`, and `scripts/` so schemas, sample payloads, and migration/test helpers stay versioned outside UI-specific code.
 - [ ] Define core Zod schemas for domain primitives (`Timestamp`, `Confidence`, `HealthStatus`).
 - [ ] Define rigid top-level `Mode` enum: `booting | no_plan | running | paused | degraded_screenpipe | logic_error`.
