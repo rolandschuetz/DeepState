@@ -24,7 +24,7 @@ By architecting the software with a strict boundary—**the headless TypeScript 
 - [x] Add structured module-scoped diagnostics/logging (`scheduler`, `screenpipe`, `classifier`, `intervention`, `import`, `memory`) to support the future debug panel.
 
 **Phase 1: Persistence & Canonical Memory (2 Layers)**
-- [ ] Set up `better-sqlite3`. Enable `WAL` journal mode and `busy_timeout`.
+- [x] Set up `better-sqlite3`. Enable `WAL` journal mode and `busy_timeout`.
 - [ ] Write a lightweight schema migration runner with explicit versioning.
 - [ ] Add migration guard rails: idempotent startup runner, migration lock/guard, rollback handling for failed migrations, and a smoke-test fixture database.
 - [ ] Base migrations: `app_settings` (including a field for `observe_only_ticks_remaining`), `privacy_exclusions`, and `runtime_health_events`.

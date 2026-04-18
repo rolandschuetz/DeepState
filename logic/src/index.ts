@@ -8,6 +8,15 @@ export {
 } from "./config/runtime-config.js";
 
 export {
+  DEFAULT_SQLITE_BUSY_TIMEOUT_MS,
+  openDatabase,
+} from "./db/database.js";
+
+export type {
+  SqliteDatabase,
+} from "./db/database.js";
+
+export {
   createDiagnosticsLogSink,
   createModuleLogger,
   DiagnosticsLogStore,
