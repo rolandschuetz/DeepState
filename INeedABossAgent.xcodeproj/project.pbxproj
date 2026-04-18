@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		117AA5866BAF45193686AB94 /* BridgeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93EF7D7DFB427A475BE9B83D /* BridgeClient.swift */; };
 		285C9737580E352F860F9DFC /* SystemState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8330A7510089CBC13E28D3D /* SystemState.swift */; };
 		29A5526998269E6CB49C916E /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 57BEB135E1BE7F24E9645694 /* Cocoa.framework */; };
 		2B8BED953941CB7267541460 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 57BEB135E1BE7F24E9645694 /* Cocoa.framework */; };
@@ -14,6 +15,8 @@
 		609FDB7CEF5786D0630FDC27 /* BootstrapConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B94C57A8AC3E37348D958E3 /* BootstrapConfigurationTests.swift */; };
 		78CFBDF1E74C697CB5536B0D /* BootstrapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 465B2AA333038EBB96306A87 /* BootstrapView.swift */; };
 		9EB292D4DF76E808159C1D14 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C75556CA6FF566442F445E1 /* AppDelegate.swift */; };
+		A7CFC21B83ABAA45697A7073 /* BridgeClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A467909EB43D1579277222B8 /* BridgeClientTests.swift */; };
+		BBBA6AD44FB8EE0A608430A8 /* BridgeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93EF7D7DFB427A475BE9B83D /* BridgeClient.swift */; };
 		C486E824E595E5829BDDB051 /* SystemState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8330A7510089CBC13E28D3D /* SystemState.swift */; };
 		D4229AA736EE9CC928CB13FB /* SystemStateDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3D9C22BD2E6B1E2D9CB3A48 /* SystemStateDecodingTests.swift */; };
 /* End PBXBuildFile section */
@@ -36,8 +39,10 @@
 		57BEB135E1BE7F24E9645694 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		740D473CB1EC82A10037C587 /* INeedABossAgent.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = INeedABossAgent.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8ED9D3F235BFF9E12D41663A /* INeedABossAgent.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = INeedABossAgent.entitlements; sourceTree = "<group>"; };
+		93EF7D7DFB427A475BE9B83D /* BridgeClient.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BridgeClient.swift; sourceTree = "<group>"; };
 		9C75556CA6FF566442F445E1 /* AppDelegate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		A3D9C22BD2E6B1E2D9CB3A48 /* SystemStateDecodingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SystemStateDecodingTests.swift; sourceTree = "<group>"; };
+		A467909EB43D1579277222B8 /* BridgeClientTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BridgeClientTests.swift; sourceTree = "<group>"; };
 		C8CEEB2521D636972C5AC10D /* INeedABossAgentTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = INeedABossAgentTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E8330A7510089CBC13E28D3D /* SystemState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SystemState.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -66,6 +71,7 @@
 			isa = PBXGroup;
 			children = (
 				3B94C57A8AC3E37348D958E3 /* BootstrapConfigurationTests.swift */,
+				A467909EB43D1579277222B8 /* BridgeClientTests.swift */,
 				A3D9C22BD2E6B1E2D9CB3A48 /* SystemStateDecodingTests.swift */,
 			);
 			name = INeedABossAgentTests;
@@ -75,6 +81,7 @@
 		36DEA81F8CFBE14431833A0F /* Bridge */ = {
 			isa = PBXGroup;
 			children = (
+				93EF7D7DFB427A475BE9B83D /* BridgeClient.swift */,
 				E8330A7510089CBC13E28D3D /* SystemState.swift */,
 			);
 			name = Bridge;
@@ -230,6 +237,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				42CDE54C4E89FF59CD4DB49E /* INeedABossAgentApp.swift in Sources */,
+				117AA5866BAF45193686AB94 /* BridgeClient.swift in Sources */,
 				9EB292D4DF76E808159C1D14 /* AppDelegate.swift in Sources */,
 				78CFBDF1E74C697CB5536B0D /* BootstrapView.swift in Sources */,
 				C486E824E595E5829BDDB051 /* SystemState.swift in Sources */,
@@ -241,6 +249,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				609FDB7CEF5786D0630FDC27 /* BootstrapConfigurationTests.swift in Sources */,
+				A7CFC21B83ABAA45697A7073 /* BridgeClientTests.swift in Sources */,
+				BBBA6AD44FB8EE0A608430A8 /* BridgeClient.swift in Sources */,
 				D4229AA736EE9CC928CB13FB /* SystemStateDecodingTests.swift in Sources */,
 				285C9737580E352F860F9DFC /* SystemState.swift in Sources */,
 			);
