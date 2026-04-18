@@ -7,8 +7,22 @@ type InteractionSummary = {
   typingSeconds: number;
 };
 
+type ActivitySummary = {
+  dominantSignal: "idle" | "typing" | "scrolling" | "clicking" | "switching";
+  isActive: boolean;
+  totalInteractions: number;
+};
+
+type UrlSummary = {
+  host: string | null;
+  normalizedUrl: string | null;
+  pathTokens: string[];
+};
+
 export type NormalizedScreenpipeEvidence = {
   accessibilityText: string | null;
+  activitySummary: ActivitySummary;
+  appIdentifier: string | null;
   appName: string | null;
   interactionSummary: InteractionSummary;
   keywords: string[];
@@ -22,6 +36,7 @@ export type NormalizedScreenpipeEvidence = {
   source: "screenpipe_search";
   uiText: string[];
   url: string | null;
+  urlSummary: UrlSummary;
   windowTitle: string | null;
 };
 
@@ -96,6 +111,116 @@ const collectIds = (values: unknown[]): Array<number | string> => {
   return [...new Set(ids)];
 };
 
+const stripControlCharacters = (value: string): string =>
+  Array.from(value)
+    .filter((character) => {
+      const codePoint = character.codePointAt(0);
+
+      return codePoint !== undefined && codePoint >= 32 && codePoint !== 127;
+    })
+    .join("");
+
+const sanitizeWhitespace = (value: string): string =>
+  stripControlCharacters(value).replace(/\s+/g, " ").trim();
+
+const sanitizeTitle = (value: string | null): string | null => {
+  if (value === null) {
+    return null;
+  }
+
+  const sanitized = sanitizeWhitespace(value)
+    .replace(/[|•·]+/g, " - ")
+    .replace(/\s+-\s+/g, " - ");
+
+  return sanitized.length > 0 ? sanitized : null;
+};
+
+const canonicalizeAppIdentifier = (value: string | null): string | null => {
+  if (value === null) {
+    return null;
+  }
+
+  const canonical = sanitizeWhitespace(value)
+    .normalize("NFKD")
+    .replace(/[^\w\s.-]/g, "")
+    .toLowerCase()
+    .replace(/\.(app|exe)$/g, "")
+    .replace(/[_\s.-]+/g, ".");
+
+  return canonical.length > 0 ? canonical : null;
+};
+
+const normalizeUrlSummary = (value: string | null): UrlSummary => {
+  if (value === null) {
+    return {
+      host: null,
+      normalizedUrl: null,
+      pathTokens: [],
+    };
+  }
+
+  try {
+    const parsed = new URL(value);
+    const normalizedUrl = `${parsed.origin}${parsed.pathname}`.replace(/\/+$/, "") || parsed.origin;
+    const pathTokens = parsed.pathname
+      .split("/")
+      .map((segment) => segment.trim().toLowerCase())
+      .filter((segment) => segment.length > 0)
+      .map((segment) => {
+        try {
+          return decodeURIComponent(segment);
+        } catch {
+          return segment;
+        }
+      })
+      .flatMap((segment) =>
+        segment
+          .split(/[^a-z0-9]+/i)
+          .map((token) => token.trim().toLowerCase())
+          .filter((token) => token.length > 0),
+      );
+
+    return {
+      host: parsed.hostname.toLowerCase(),
+      normalizedUrl,
+      pathTokens: [...new Set(pathTokens)],
+    };
+  } catch {
+    return {
+      host: null,
+      normalizedUrl: sanitizeWhitespace(value),
+      pathTokens: [],
+    };
+  }
+};
+
+const summarizeActivity = (
+  interactionSummary: InteractionSummary,
+): ActivitySummary => {
+  const orderedSignals: Array<{
+    key: ActivitySummary["dominantSignal"];
+    value: number;
+  }> = [
+    { key: "typing", value: interactionSummary.typingSeconds },
+    { key: "scrolling", value: interactionSummary.scrollEvents },
+    { key: "clicking", value: interactionSummary.clickCount },
+    { key: "switching", value: interactionSummary.appSwitches },
+  ];
+
+  const dominantSignal =
+    orderedSignals.find((entry) => entry.value > 0)?.key ?? "idle";
+  const totalInteractions = orderedSignals.reduce(
+    (total, entry) => total + entry.value,
+    0,
+  );
+
+  return {
+    dominantSignal,
+    isActive: totalInteractions > 0,
+    totalInteractions,
+  };
+};
+
 const firstNumber = (values: unknown[]): number | null => {
   for (const value of values) {
     if (typeof value === "number" && Number.isFinite(value)) {
@@ -118,6 +243,39 @@ export const normalizeScreenpipeRecordToEvidence = (
   rawRecord: unknown,
 ): NormalizedScreenpipeEvidence => {
   const record = normalizeScreenpipeRecordTimestamps(rawRecord);
+  const appName = firstString(
+    collectNestedValues(record, [
+      "app_name",
+      "appName",
+      "application_name",
+      "applicationName",
+    ]),
+  );
+  const interactionSummary = {
+    appSwitches:
+      firstNumber(collectNestedValues(record, ["app_switches", "appSwitches"])) ?? 0,
+    clickCount:
+      firstNumber(
+        collectNestedValues(record, ["click_count", "clickCount", "mouse_clicks"]),
+      ) ?? 0,
+    scrollEvents:
+      firstNumber(collectNestedValues(record, ["scroll_events", "scrollEvents"])) ?? 0,
+    typingSeconds:
+      firstNumber(
+        collectNestedValues(record, [
+          "typing_seconds",
+          "typingSeconds",
+          "typed_duration_seconds",
+        ]),
+      ) ?? 0,
+  };
+  const rawUrl = firstString(
+    collectNestedValues(record, ["url", "page_url", "pageUrl"]),
+  );
+  const urlSummary = normalizeUrlSummary(rawUrl);
+  const windowTitle = sanitizeTitle(
+    firstString(collectNestedValues(record, ["window_title", "windowTitle", "title"])),
+  );
 
   return {
     accessibilityText: firstString(
@@ -127,32 +285,10 @@ export const normalizeScreenpipeRecordToEvidence = (
         "a11y_text",
       ]),
     ),
-    appName: firstString(
-      collectNestedValues(record, [
-        "app_name",
-        "appName",
-        "application_name",
-        "applicationName",
-      ]),
-    ),
-    interactionSummary: {
-      appSwitches:
-        firstNumber(collectNestedValues(record, ["app_switches", "appSwitches"])) ?? 0,
-      clickCount:
-        firstNumber(
-          collectNestedValues(record, ["click_count", "clickCount", "mouse_clicks"]),
-        ) ?? 0,
-      scrollEvents:
-        firstNumber(collectNestedValues(record, ["scroll_events", "scrollEvents"])) ?? 0,
-      typingSeconds:
-        firstNumber(
-          collectNestedValues(record, [
-            "typing_seconds",
-            "typingSeconds",
-            "typed_duration_seconds",
-          ]),
-        ) ?? 0,
-    },
+    activitySummary: summarizeActivity(interactionSummary),
+    appIdentifier: canonicalizeAppIdentifier(appName),
+    appName,
+    interactionSummary,
     keywords: collectStrings(collectNestedValues(record, ["keywords", "tags"])),
     observedAt: firstString(
       collectNestedValues(record, [
@@ -186,12 +322,9 @@ export const normalizeScreenpipeRecordToEvidence = (
     uiText: collectStrings(
       collectNestedValues(record, ["ui_text", "uiText", "text_lines", "textLines"]),
     ),
-    url: firstString(
-      collectNestedValues(record, ["url", "page_url", "pageUrl"]),
-    ),
-    windowTitle: firstString(
-      collectNestedValues(record, ["window_title", "windowTitle", "title"]),
-    ),
+    url: urlSummary.normalizedUrl,
+    urlSummary,
+    windowTitle,
   };
 };
 

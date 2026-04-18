@@ -24,6 +24,12 @@ describe("normalizeScreenpipeRecordToEvidence", () => {
       }),
     ).toEqual({
       accessibilityText: null,
+      activitySummary: {
+        dominantSignal: "typing",
+        isActive: true,
+        totalInteractions: 114,
+      },
+      appIdentifier: "google.chrome",
       appName: "Google Chrome",
       interactionSummary: {
         appSwitches: 0,
@@ -42,6 +48,11 @@ describe("normalizeScreenpipeRecordToEvidence", () => {
       source: "screenpipe_search",
       uiText: [],
       url: "https://docs.stripe.com/payments",
+      urlSummary: {
+        host: "docs.stripe.com",
+        normalizedUrl: "https://docs.stripe.com/payments",
+        pathTokens: ["payments"],
+      },
       windowTitle: "Stripe Docs - Payments",
     });
   });
@@ -71,6 +82,12 @@ describe("normalizeScreenpipeRecordToEvidence", () => {
       }),
     ).toEqual({
       accessibilityText: "Button Save",
+      activitySummary: {
+        dominantSignal: "typing",
+        isActive: true,
+        totalInteractions: 50,
+      },
+      appIdentifier: "cursor",
       appName: "Cursor",
       interactionSummary: {
         appSwitches: 2,
@@ -89,7 +106,57 @@ describe("normalizeScreenpipeRecordToEvidence", () => {
       source: "screenpipe_search",
       uiText: ["checkout", "launch"],
       url: "https://github.com/openai/repo/pull/1",
+      urlSummary: {
+        host: "github.com",
+        normalizedUrl: "https://github.com/openai/repo/pull/1",
+        pathTokens: ["openai", "repo", "pull", "1"],
+      },
       windowTitle: "checkout.tsx - repo",
+    });
+  });
+
+  it("sanitizes noisy titles, canonicalizes app identifiers, and strips url query noise", () => {
+    expect(
+      normalizeScreenpipeRecordToEvidence({
+        app_name: "Linear.app",
+        id: "record_3",
+        scroll_events: 2,
+        title: "  Sprint Review  \n|\tLinear  ",
+        url:
+          "https://linear.app/acme/issue/ENG-123/fix-auth-flow?utm_source=test#activity",
+      }),
+    ).toEqual({
+      accessibilityText: null,
+      activitySummary: {
+        dominantSignal: "scrolling",
+        isActive: true,
+        totalInteractions: 2,
+      },
+      appIdentifier: "linear",
+      appName: "Linear.app",
+      interactionSummary: {
+        appSwitches: 0,
+        clickCount: 0,
+        scrollEvents: 2,
+        typingSeconds: 0,
+      },
+      keywords: [],
+      observedAt: null,
+      ocrText: null,
+      screenpipeRefs: {
+        elementIds: [],
+        frameIds: [],
+        recordIds: ["record_3"],
+      },
+      source: "screenpipe_search",
+      uiText: [],
+      url: "https://linear.app/acme/issue/ENG-123/fix-auth-flow",
+      urlSummary: {
+        host: "linear.app",
+        normalizedUrl: "https://linear.app/acme/issue/ENG-123/fix-auth-flow",
+        pathTokens: ["acme", "issue", "eng", "123", "fix", "auth", "flow"],
+      },
+      windowTitle: "Sprint Review - Linear",
     });
   });
 });
