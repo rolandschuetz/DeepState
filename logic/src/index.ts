@@ -8,6 +8,12 @@ export {
 } from "./config/runtime-config.js";
 
 export {
+  createDiagnosticsLogSink,
+  createModuleLogger,
+  DiagnosticsLogStore,
+} from "./diagnostics/logger.js";
+
+export {
   isRuntimeEvaluationEnabled,
   runWhenModeIsRunning,
 } from "./runtime/mode-gate.js";
