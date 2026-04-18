@@ -11,6 +11,9 @@
 		1E6FC4A1B8D14AC7A3A51001 /* AppStateStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E6FC4A1B8D14AC7A3A51000 /* AppStateStore.swift */; };
 		1E6FC4A1B8D14AC7A3A51003 /* AppStateStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E6FC4A1B8D14AC7A3A51002 /* AppStateStoreTests.swift */; };
 		1E6FC4A1B8D14AC7A3A51004 /* AppStateStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E6FC4A1B8D14AC7A3A51000 /* AppStateStore.swift */; };
+		1E6FC4A1B8D14AC7A3A51005 /* ModeRouterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E6FC4A1B8D14AC7A3A51006 /* ModeRouterView.swift */; };
+		1E6FC4A1B8D14AC7A3A51007 /* ModeRouterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E6FC4A1B8D14AC7A3A51006 /* ModeRouterView.swift */; };
+		1E6FC4A1B8D14AC7A3A51008 /* ModeRouterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E6FC4A1B8D14AC7A3A51009 /* ModeRouterTests.swift */; };
 		285C9737580E352F860F9DFC /* SystemState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8330A7510089CBC13E28D3D /* SystemState.swift */; };
 		29A5526998269E6CB49C916E /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 57BEB135E1BE7F24E9645694 /* Cocoa.framework */; };
 		2B8BED953941CB7267541460 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 57BEB135E1BE7F24E9645694 /* Cocoa.framework */; };
@@ -38,6 +41,8 @@
 		02EAFF09630A2E86451922C7 /* INeedABossAgentApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = INeedABossAgentApp.swift; sourceTree = "<group>"; };
 		1E6FC4A1B8D14AC7A3A51000 /* AppStateStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppStateStore.swift; sourceTree = "<group>"; };
 		1E6FC4A1B8D14AC7A3A51002 /* AppStateStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppStateStoreTests.swift; sourceTree = "<group>"; };
+		1E6FC4A1B8D14AC7A3A51006 /* ModeRouterView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ModeRouterView.swift; sourceTree = "<group>"; };
+		1E6FC4A1B8D14AC7A3A51009 /* ModeRouterTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ModeRouterTests.swift; sourceTree = "<group>"; };
 		3B94C57A8AC3E37348D958E3 /* BootstrapConfigurationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BootstrapConfigurationTests.swift; sourceTree = "<group>"; };
 		465B2AA333038EBB96306A87 /* BootstrapView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BootstrapView.swift; sourceTree = "<group>"; };
 		554F840A73FB0BFAE29F6E58 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -76,6 +81,7 @@
 			isa = PBXGroup;
 			children = (
 				1E6FC4A1B8D14AC7A3A51002 /* AppStateStoreTests.swift */,
+				1E6FC4A1B8D14AC7A3A51009 /* ModeRouterTests.swift */,
 				3B94C57A8AC3E37348D958E3 /* BootstrapConfigurationTests.swift */,
 				A467909EB43D1579277222B8 /* BridgeClientTests.swift */,
 				A3D9C22BD2E6B1E2D9CB3A48 /* SystemStateDecodingTests.swift */,
@@ -126,6 +132,7 @@
 				1E6FC4A1B8D14AC7A3A51000 /* AppStateStore.swift */,
 				9C75556CA6FF566442F445E1 /* AppDelegate.swift */,
 				465B2AA333038EBB96306A87 /* BootstrapView.swift */,
+				1E6FC4A1B8D14AC7A3A51006 /* ModeRouterView.swift */,
 				554F840A73FB0BFAE29F6E58 /* Info.plist */,
 				8ED9D3F235BFF9E12D41663A /* INeedABossAgent.entitlements */,
 				36DEA81F8CFBE14431833A0F /* Bridge */,
@@ -248,6 +255,7 @@
 				117AA5866BAF45193686AB94 /* BridgeClient.swift in Sources */,
 				9EB292D4DF76E808159C1D14 /* AppDelegate.swift in Sources */,
 				78CFBDF1E74C697CB5536B0D /* BootstrapView.swift in Sources */,
+				1E6FC4A1B8D14AC7A3A51005 /* ModeRouterView.swift in Sources */,
 				C486E824E595E5829BDDB051 /* SystemState.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -258,6 +266,8 @@
 			files = (
 				1E6FC4A1B8D14AC7A3A51003 /* AppStateStoreTests.swift in Sources */,
 				1E6FC4A1B8D14AC7A3A51004 /* AppStateStore.swift in Sources */,
+				1E6FC4A1B8D14AC7A3A51008 /* ModeRouterTests.swift in Sources */,
+				1E6FC4A1B8D14AC7A3A51007 /* ModeRouterView.swift in Sources */,
 				609FDB7CEF5786D0630FDC27 /* BootstrapConfigurationTests.swift in Sources */,
 				A7CFC21B83ABAA45697A7073 /* BridgeClientTests.swift in Sources */,
 				BBBA6AD44FB8EE0A608430A8 /* BridgeClient.swift in Sources */,
