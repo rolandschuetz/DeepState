@@ -24,9 +24,9 @@ struct BootstrapView: View {
         onImport: { payload in
           do {
             let result = try await bridgeClient.dispatchCommand(payload)
-            return MorningFlowPresenter.importFeedback(from: result)
+            return MorningFlowPresenter.importOutcome(from: result)
           } catch {
-            return MorningFlowPresenter.importFeedback(from: error)
+            return MorningFlowPresenter.importOutcome(from: error)
           }
         }
       )

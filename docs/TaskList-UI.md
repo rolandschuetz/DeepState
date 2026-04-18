@@ -32,7 +32,7 @@ This task list reflects the tightened V1 MVP architecture:
 - [x] Create `MorningFlowView` displaying the read-only morning prompt and `Copy to Clipboard` feature.
 - [x] Add a multiline text area for ChatGPT's response. Run `.pasteSanitize()` on the text content, encapsulate it inside the `import_coaching_exchange` object, and dispatch via `POST /command`.
 - [x] Decode TS parser errors inline cleanly so the user can easily re-edit their payload string.
-- [ ] Add explicit success confirmation, edit/re-import affordance, and duplicate-submit protection for in-flight morning imports.
+- [x] Add explicit success confirmation, edit/re-import affordance, and duplicate-submit protection for in-flight morning imports.
 
 **Phase 2: Menu Bar Status**
 - [ ] Create a minimal `MenuBarExtra` view implementation.

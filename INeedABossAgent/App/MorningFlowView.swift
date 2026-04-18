@@ -17,10 +17,14 @@ struct MorningFlowContent: Equatable {
   let promptText: String
 }
 
-struct MorningFlowImportFeedback: Equatable {
+struct MorningFlowImportOutcome: Equatable {
+  let isSuccess: Bool
   let title: String
   let detailLines: [String]
 }
+
+typealias MorningFlowImportHandler =
+  @Sendable (ImportCoachingExchangeCommandPayload) async -> MorningFlowImportOutcome
 
 enum MorningFlowPresenter {
   static func content(from morningExchange: MorningExchangeViewModel?) -> MorningFlowContent? {
@@ -45,19 +49,17 @@ enum MorningFlowPresenter {
     )
   }
 
-  static func importFeedback(from result: CommandActionResult) -> MorningFlowImportFeedback? {
-    guard result.status != .success else {
-      return nil
-    }
-
-    return MorningFlowImportFeedback(
+  static func importOutcome(from result: CommandActionResult) -> MorningFlowImportOutcome {
+    MorningFlowImportOutcome(
+      isSuccess: result.status == .success,
       title: result.message,
       detailLines: result.issues ?? []
     )
   }
 
-  static func importFeedback(from error: Error) -> MorningFlowImportFeedback {
-    MorningFlowImportFeedback(
+  static func importOutcome(from error: Error) -> MorningFlowImportOutcome {
+    MorningFlowImportOutcome(
+      isSuccess: false,
       title: error.localizedDescription,
       detailLines: []
     )
@@ -67,13 +69,18 @@ enum MorningFlowPresenter {
 struct MorningFlowView: View {
   let morningExchange: MorningExchangeViewModel?
   var clipboard: ClipboardWriting = SystemClipboardWriter()
-  var onImport:
-    @Sendable (ImportCoachingExchangeCommandPayload) async -> MorningFlowImportFeedback? = {
-      _ in nil
-    }
+  var onImport: MorningFlowImportHandler = {
+    _ in
+    MorningFlowImportOutcome(
+      isSuccess: true,
+      title: "Command accepted.",
+      detailLines: []
+    )
+  }
 
   @State private var responseText = ""
-  @State private var importFeedback: MorningFlowImportFeedback?
+  @State private var importOutcome: MorningFlowImportOutcome?
+  @State private var isSubmitting = false
 
   var body: some View {
     if let content = MorningFlowPresenter.content(from: morningExchange) {
@@ -110,20 +117,23 @@ struct MorningFlowView: View {
           .font(.caption.monospaced())
           .frame(minHeight: 140)
           .onChange(of: responseText) {
-            importFeedback = nil
+            if isSubmitting == false, importOutcome?.isSuccess == false {
+              importOutcome = nil
+            }
           }
+          .disabled(importOutcome?.isSuccess == true)
           .overlay {
             RoundedRectangle(cornerRadius: 8)
               .strokeBorder(.quaternary)
           }
 
-        if let importFeedback {
+        if let importOutcome {
           VStack(alignment: .leading, spacing: 4) {
-            Text(importFeedback.title)
+            Text(importOutcome.title)
               .font(.caption)
-              .foregroundStyle(.orange)
+              .foregroundStyle(importOutcome.isSuccess ? .green : .orange)
 
-            ForEach(importFeedback.detailLines, id: \.self) { line in
+            ForEach(importOutcome.detailLines, id: \.self) { line in
               Text(line)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
@@ -131,13 +141,27 @@ struct MorningFlowView: View {
           }
         }
 
-        Button("Import Response") {
-          let payload = MorningFlowPresenter.makeImportPayload(from: responseText)
-          Task {
-            importFeedback = await onImport(payload)
+        if importOutcome?.isSuccess == true {
+          Button("Edit and Re-import") {
+            importOutcome = nil
           }
+          .font(.caption)
+        } else {
+          Button(isSubmitting ? "Importing..." : "Import Response") {
+            let payload = MorningFlowPresenter.makeImportPayload(from: responseText)
+            isSubmitting = true
+
+            Task {
+              importOutcome = await onImport(payload)
+              isSubmitting = false
+            }
+          }
+          .font(.caption)
+          .disabled(
+            isSubmitting
+              || responseText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+          )
         }
-        .font(.caption)
       }
     }
   }
@@ -151,7 +175,8 @@ struct MorningFlowView: View {
       promptText: "Summarize the day and return strict JSON."
     ),
     onImport: { _ in
-      MorningFlowImportFeedback(
+      MorningFlowImportOutcome(
+        isSuccess: false,
         title: "Command payload failed validation.",
         detailLines: ["payload.raw_text: Required"]
       )

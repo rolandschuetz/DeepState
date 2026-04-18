@@ -60,7 +60,7 @@ final class MorningFlowViewTests: XCTestCase {
 
   func testMapsValidationResultIntoInlineFeedback() {
     XCTAssertEqual(
-      MorningFlowPresenter.importFeedback(
+      MorningFlowPresenter.importOutcome(
         from: CommandActionResult(
           correlationId: "corr_1",
           commandId: nil,
@@ -70,16 +70,17 @@ final class MorningFlowViewTests: XCTestCase {
           status: .validationError
         )
       ),
-      MorningFlowImportFeedback(
+      MorningFlowImportOutcome(
+        isSuccess: false,
         title: "Command payload failed validation.",
         detailLines: ["payload.raw_text: Invalid JSON"]
       )
     )
   }
 
-  func testIgnoresSuccessfulImportResult() {
-    XCTAssertNil(
-      MorningFlowPresenter.importFeedback(
+  func testMapsSuccessfulImportResultIntoSuccessOutcome() {
+    XCTAssertEqual(
+      MorningFlowPresenter.importOutcome(
         from: CommandActionResult(
           correlationId: "corr_2",
           commandId: "cmd_1",
@@ -88,6 +89,11 @@ final class MorningFlowViewTests: XCTestCase {
           issues: nil,
           status: .success
         )
+      ),
+      MorningFlowImportOutcome(
+        isSuccess: true,
+        title: "Command accepted.",
+        detailLines: []
       )
     )
   }
