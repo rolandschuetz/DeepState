@@ -1,4 +1,8 @@
 export {
+  buildStartupSystemState,
+} from "./bootstrap/startup-state.js";
+
+export {
   createBridgeServer,
 } from "./server/bridge-server.js";
 
