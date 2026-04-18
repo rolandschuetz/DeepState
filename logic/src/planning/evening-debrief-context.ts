@@ -18,6 +18,7 @@ import {
   type EpisodeRecord,
   type ProgressEstimateRecord,
 } from "../repos/sqlite-repositories.js";
+import { buildExplainabilityForDashboard } from "../explainability/explainability-generator.js";
 
 export const nextLocalDateUtc = (localDate: string): string => {
   const base = new Date(`${localDate}T00:00:00.000Z`);
@@ -42,25 +43,39 @@ const episodeDurationSeconds = (episode: EpisodeRecord): number =>
   );
 
 /**
- * 2–3 concrete evidence lines for the debrief packet: prefer stored episode evidence, else state-based fallbacks.
+ * Reuse the explainability formatter so exported episodes carry the same evidence/debugging shape as runtime UI diagnostics.
  */
 export const explainabilityBulletsForEpisode = (episode: EpisodeRecord): string[] => {
-  const fromEvidence = episode.topEvidence.filter((line) => line.trim().length > 0).slice(0, 3);
-
-  if (fromEvidence.length >= 2) {
-    return fromEvidence.slice(0, 3);
-  }
+  const fromEvidence = episode.topEvidence
+    .filter((line) => line.trim().length > 0)
+    .slice(0, 3)
+    .map((detail, index) => ({
+      code: "episode_evidence",
+      detail,
+      weight: Math.max(0.45, 0.9 - index * 0.1),
+    }));
 
   const support = episode.isSupportWork ? "support work" : "primary work";
   const taskHint =
     episode.matchedTaskId === null ? "unmatched task" : `matched task ${episode.matchedTaskId}`;
 
   const synthetic = [
-    `Runtime state ${episode.runtimeState} (${support}, ${taskHint}).`,
-    `Window duration about ${episodeDurationSeconds(episode)}s.`,
+    {
+      code: "episode_runtime_state",
+      detail: `Runtime state ${episode.runtimeState} (${support}, ${taskHint}).`,
+      weight: 0.54,
+    },
+    {
+      code: "episode_duration",
+      detail: `Window duration about ${episodeDurationSeconds(episode)}s.`,
+      weight: 0.42,
+    },
   ];
 
-  return [...fromEvidence, ...synthetic].slice(0, 3);
+  return buildExplainabilityForDashboard({
+    confidenceRatio: episode.confidenceRatio,
+    raw: [...fromEvidence, ...synthetic],
+  }).map((item) => item.detail);
 };
 
 export type EveningDebriefPacketInput = {
@@ -246,6 +261,8 @@ export const generateEveningPrompt = (debriefPacketText: string): string =>
     "Reflect on the debrief packet: what moved forward, what was support work, what was ambiguous, and what should be remembered or not remembered.",
     "task_outcomes must include 1 to 3 items whose task_title values align with the plan tasks when possible.",
     "Use empty arrays for new_support_patterns_to_remember or patterns_to_not_remember when there is nothing to store.",
+    "Use corrected_ambiguity_labels for durable relabeling suggestions about work that looked ambiguous or drift-like but should be classified differently next time.",
+    "Use tomorrow_suggestions for concrete next-day guidance; use milestone_relevance_summary when a milestone deserves explicit carry-forward context, otherwise set it to null.",
     "Debrief packet JSON:",
     debriefPacketText,
   ].join("\n\n");

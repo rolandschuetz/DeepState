@@ -41,6 +41,17 @@ const buildEveningMemorySummaryText = (exchange: EveningDebriefExchange): string
     exchange.coaching_note_for_tomorrow === null
       ? null
       : `Coaching note for tomorrow: ${exchange.coaching_note_for_tomorrow}`,
+    exchange.tomorrow_suggestions === undefined || exchange.tomorrow_suggestions.length === 0
+      ? null
+      : [
+          "Tomorrow suggestions:",
+          ...exchange.tomorrow_suggestions.map((suggestion) => `- ${suggestion}`),
+        ].join("\n"),
+    exchange.milestone_relevance_summary === undefined ||
+    exchange.milestone_relevance_summary === null ||
+    exchange.milestone_relevance_summary.trim().length === 0
+      ? null
+      : `Milestone relevance: ${exchange.milestone_relevance_summary}`,
     exchange.task_outcomes
       .map(
         (outcome) =>
@@ -116,6 +127,7 @@ export const importEveningDebriefExchange = ({
     });
 
     const sourceTag = `${EVENING_DEBRIEF_SOURCE_PREFIX}${exchange.local_date}`;
+    const correctedAmbiguityLabels = exchange.corrected_ambiguity_labels ?? [];
 
     for (const pattern of exchange.new_support_patterns_to_remember) {
       const trimmed = pattern.trim();
@@ -159,6 +171,24 @@ export const importEveningDebriefExchange = ({
         proposalId: randomUUID(),
         proposalText: boundary,
         rationale: "Task boundary corrections captured during evening debrief.",
+        reviewedAt: null,
+        source: sourceTag,
+        status: "pending",
+      });
+    }
+
+    for (const correction of correctedAmbiguityLabels) {
+      const trimmed = correction.trim();
+      if (trimmed.length === 0) {
+        continue;
+      }
+
+      ruleProposalRepo.create({
+        createdAt: importedAt,
+        proposalId: randomUUID(),
+        proposalText: trimmed,
+        rationale:
+          "Ambiguity relabeling correction captured during evening debrief for future classification review.",
         reviewedAt: null,
         source: sourceTag,
         status: "pending",

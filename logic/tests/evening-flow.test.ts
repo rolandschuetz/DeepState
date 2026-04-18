@@ -96,8 +96,17 @@ const EVENING_DEBRIEF_JSON = JSON.stringify({
   new_support_patterns_to_remember: ["Stripe docs while coding checkout counts as support"],
   patterns_to_not_remember: ["Email triage during deep work"],
   corrections_for_task_boundaries: "Treat launch-channel Slack as launch coordination.",
+  corrected_ambiguity_labels: [
+    "Research tabs opened during checkout implementation count as support work, not drift.",
+  ],
   carry_forward_to_tomorrow: "Finish billing copy review first.",
   coaching_note_for_tomorrow: "Keep support work explicit in the morning plan.",
+  tomorrow_suggestions: [
+    "Start with billing copy review before opening chat.",
+    "List design QA as allowed support work in the morning plan.",
+  ],
+  milestone_relevance_summary:
+    "Finalized Figma states are milestone-relevant because they unlock engineering handoff.",
 });
 
 describe("evening flow", () => {
@@ -216,7 +225,14 @@ describe("evening flow", () => {
     expect(state.dashboard.evening_exchange?.status).toBe("completed");
     expect(memoryRepo.listDailyMemoryNotes()).toHaveLength(1);
     expect(memoryRepo.listDailyMemoryNotes()[0]?.summaryText).toContain("Carry forward");
-    expect(ruleProposalRepo.listAll()).toHaveLength(3);
+    expect(memoryRepo.listDailyMemoryNotes()[0]?.summaryText).toContain("Tomorrow suggestions:");
+    expect(memoryRepo.listDailyMemoryNotes()[0]?.summaryText).toContain("Milestone relevance:");
+    expect(ruleProposalRepo.listAll()).toHaveLength(4);
+    expect(
+      ruleProposalRepo
+        .listAll()
+        .some((proposal) => proposal.rationale.includes("Ambiguity relabeling correction")),
+    ).toBe(true);
     expect(
       auditLogRepo.listAll().some((entry) => entry.exchangeType === "evening_debrief"),
     ).toBe(true);
@@ -241,7 +257,7 @@ describe("evening flow", () => {
     expect(hasAcceptedEveningDebriefForLocalDate(database, "2026-04-18")).toBe(true);
     expect(state.dashboard.evening_exchange?.status).toBe("completed");
     expect(state.dashboard.evening_exchange?.debrief_packet_text).toBeNull();
-    expect(state.dashboard.review_queue.length).toBe(3);
+    expect(state.dashboard.review_queue.length).toBe(4);
   });
 
   it("routes evening imports through the unified import command handler", () => {

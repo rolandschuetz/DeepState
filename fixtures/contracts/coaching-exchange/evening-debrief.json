@@ -17,6 +17,14 @@
   ],
   "patterns_to_not_remember": [],
   "corrections_for_task_boundaries": null,
+  "corrected_ambiguity_labels": [
+    "Research tabs during checkout implementation count as support work, not drift."
+  ],
   "carry_forward_to_tomorrow": "Finalize mobile variants.",
-  "coaching_note_for_tomorrow": "Start with the highest-friction state."
+  "coaching_note_for_tomorrow": "Start with the highest-friction state.",
+  "tomorrow_suggestions": [
+    "Open the mobile variants file first.",
+    "Keep implementation constraints visible while designing."
+  ],
+  "milestone_relevance_summary": "Mobile variants completion is the clearest handoff milestone for tomorrow."
 }

@@ -67,8 +67,11 @@ export const eveningDebriefExchangeSchema = z.object({
   new_support_patterns_to_remember: z.array(z.string()),
   patterns_to_not_remember: z.array(z.string()),
   corrections_for_task_boundaries: z.string().nullable(),
+  corrected_ambiguity_labels: z.array(z.string()).optional(),
   carry_forward_to_tomorrow: z.string().nullable(),
   coaching_note_for_tomorrow: z.string().nullable(),
+  tomorrow_suggestions: z.array(z.string()).optional(),
+  milestone_relevance_summary: z.string().nullable().optional(),
 });
 
 export const coachingExchangeSchema = z.discriminatedUnion("exchange_type", [

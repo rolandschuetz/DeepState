@@ -211,6 +211,12 @@
             }
           ]
         },
+        "corrected_ambiguity_labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "carry_forward_to_tomorrow": {
           "anyOf": [
             {
@@ -222,6 +228,22 @@
           ]
         },
         "coaching_note_for_tomorrow": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tomorrow_suggestions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "milestone_relevance_summary": {
           "anyOf": [
             {
               "type": "string"

@@ -96,10 +96,10 @@ By architecting the software with a strict boundary—**the headless TypeScript 
 **Phase 6: Evening Flow & Reviewable Learning**
 - [x] Implement `EveningDebriefPacketBuilder` stringing together plans, episodes, drift blocks, pauses, and overrides.
 - [x] Include progress signals, estimate-vs-actual effort, unresolved ambiguities, and suggested learning candidates in the debrief packet.
-- [ ] Reuse `ExplainabilityGenerator` to automatically append 2-3 concrete evidence bullets to every task episode within the export packet to supply the LLM with hard facts.
+- [x] Reuse `ExplainabilityGenerator` to automatically append 2-3 concrete evidence bullets to every task episode within the export packet to supply the LLM with hard facts.
 - [x] Implement `EveningPromptGenerator` instructing ChatGPT to spit back **strict JSON only**.
 - [x] Branch `CoachingExchangeParser` for `exchange_type === "evening_debrief"`.
-- [ ] Parse clarified task boundaries, corrected ambiguity labels, candidate durable memories, tomorrow suggestions, and milestone relevance from valid evening imports.
+- [x] Parse clarified task boundaries, corrected ambiguity labels, candidate durable memories, tomorrow suggestions, and milestone relevance from valid evening imports.
 - [x] Parse imported structured debriefs in SQLite `daily_memory_notes`.
 - [x] Implement a review queue for candidate durable rule updates. (Rules must be user-confirmed to pass to `durable_rules`).
 - [x] Convert accepted evening imports into `DailyMemoryNote`, `RuleProposal`, and reviewable durable-memory candidates without auto-promoting speculative text into truth.
