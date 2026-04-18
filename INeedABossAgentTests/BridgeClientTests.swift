@@ -247,6 +247,41 @@ final class BridgeClientTests: XCTestCase {
     client.disconnect()
   }
 
+  func testConnectFailsOnSchemaVersionMismatch() async throws {
+    let mismatchedStateJSON = try mutateSystemStateJSON(
+      try fixtureString(named: "system-state.running.json")
+    ) { state in
+      state["schema_version"] = "2.0.0"
+    }
+
+    let client = BridgeClient(
+      configuration: makeConfiguration(),
+      transport: MockEventStreamTransport(events: [
+        .init(event: BridgeClient.systemStateEventName, data: mismatchedStateJSON)
+      ]),
+      automaticallyReconnect: false
+    )
+
+    client.connect()
+    await waitForCondition {
+      if case .failed = client.connectionState {
+        true
+      } else {
+        false
+      }
+    }
+
+    XCTAssertEqual(
+      client.connectionState,
+      .failed("Bridge schema version mismatch. Expected 1.0.0, received 2.0.0.")
+    )
+    XCTAssertEqual(
+      client.lastErrorDescription,
+      "Bridge schema version mismatch. Expected 1.0.0, received 2.0.0."
+    )
+    XCTAssertNil(client.latestState)
+  }
+
   func testDispatchCommandPostsPauseFixturePayload() async throws {
     let commandTransport = MockCommandRequestTransport(
       statusCode: 202,
@@ -307,6 +342,55 @@ final class BridgeClientTests: XCTestCase {
     XCTAssertEqual(result.status, .validationError)
     XCTAssertNil(result.commandId)
     XCTAssertEqual(result.issues, ["payload.raw_text: Required"])
+    XCTAssertEqual(
+      client.lastCommandFailure,
+      BridgeCommandFailure(
+        kind: nil,
+        message: "Command payload failed validation.",
+        issues: ["payload.raw_text: Required"],
+        status: .validationError
+      )
+    )
+  }
+
+  func testDispatchCommandClearsRecordedFailureAfterSuccess() async throws {
+    let commandTransport = MockCommandRequestTransport(responses: [
+      .init(
+        statusCode: 400,
+        responseJSON:
+          #"{"correlation_id":"corr_2","command_id":null,"message":"Command payload failed validation.","issues":["payload.raw_text: Required"],"status":"validation_error"}"#
+      ),
+      .init(
+        statusCode: 202,
+        responseJSON:
+          #"{"correlation_id":"corr_3","command_id":"9f07d1d0-71ea-4971-868a-e2bf8d41d010","kind":"resume","message":"Command accepted.","status":"success"}"#
+      ),
+    ])
+    let client = BridgeClient(
+      configuration: makeConfiguration(),
+      transport: MockEventStreamTransport(),
+      commandTransport: commandTransport
+    )
+
+    _ = try await client.dispatchCommand(
+      ImportCoachingExchangeCommandPayload(
+        source: .manualPaste,
+        rawText: "{}"
+      ),
+      commandId: "8f0c0737-5ea7-4dd2-9a26-2ef6b281a6fa",
+      sentAt: "2026-04-18T09:05:00Z"
+    )
+
+    XCTAssertNotNil(client.lastCommandFailure)
+
+    let result = try await client.dispatchCommand(
+      ResumeCommandPayload(reason: .userResume),
+      commandId: "9f07d1d0-71ea-4971-868a-e2bf8d41d010",
+      sentAt: "2026-04-18T09:06:00Z"
+    )
+
+    XCTAssertEqual(result.status, .success)
+    XCTAssertNil(client.lastCommandFailure)
   }
 
   private func makeConfiguration() -> BridgeConfiguration {
@@ -479,15 +563,28 @@ private final class ScriptedEventStreamTransport: EventStreamTransport {
 }
 
 private final class MockCommandRequestTransport: CommandRequestTransport {
-  private let responseData: Data
-  private let statusCode: Int
+  struct Response {
+    let responseData: Data
+    let statusCode: Int
+
+    init(statusCode: Int, responseJSON: String) {
+      self.responseData = Data(responseJSON.utf8)
+      self.statusCode = statusCode
+    }
+  }
+
+  private let responses: [Response]
+  private var nextResponseIndex = 0
 
   private(set) var requestBodies: [Data] = []
   private(set) var requests: [URLRequest] = []
 
   init(statusCode: Int, responseJSON: String) {
-    self.responseData = Data(responseJSON.utf8)
-    self.statusCode = statusCode
+    self.responses = [.init(statusCode: statusCode, responseJSON: responseJSON)]
+  }
+
+  init(responses: [Response]) {
+    self.responses = responses
   }
 
   func perform(
@@ -497,13 +594,19 @@ private final class MockCommandRequestTransport: CommandRequestTransport {
     requests.append(request)
     requestBodies.append(body)
 
-    let response = HTTPURLResponse(
+    let response =
+      nextResponseIndex < responses.count
+      ? responses[nextResponseIndex]
+      : try XCTUnwrap(responses.last)
+    nextResponseIndex += 1
+
+    let httpResponse = HTTPURLResponse(
       url: try XCTUnwrap(request.url),
-      statusCode: statusCode,
+      statusCode: response.statusCode,
       httpVersion: nil,
       headerFields: ["Content-Type": "application/json"]
     )
 
-    return (responseData, try XCTUnwrap(response))
+    return (response.responseData, try XCTUnwrap(httpResponse))
   }
 }

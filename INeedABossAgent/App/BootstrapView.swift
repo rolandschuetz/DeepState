@@ -19,7 +19,12 @@ struct BootstrapView: View {
         .font(.caption)
         .foregroundStyle(.tertiary)
 
-      DiagnosticsView(systemHealth: appStateStore.dashboardState.systemHealth)
+      DiagnosticsView(
+        systemHealth: appStateStore.dashboardState.systemHealth,
+        connectionState: bridgeClient.connectionState,
+        bridgeError: bridgeClient.lastErrorDescription,
+        lastCommandFailure: bridgeClient.lastCommandFailure
+      )
     }
     .padding(16)
     .frame(width: 320)

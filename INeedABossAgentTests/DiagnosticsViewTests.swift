@@ -1,11 +1,25 @@
 import XCTest
 
 final class DiagnosticsViewTests: XCTestCase {
-  func testReturnsNoRowsWithoutSystemHealth() {
-    XCTAssertTrue(DiagnosticsPresenter.rows(from: nil).isEmpty)
+  func testShowsBridgeRowWithoutSystemHealth() {
+    XCTAssertEqual(
+      DiagnosticsPresenter.rows(
+        from: nil,
+        connectionState: .connecting,
+        bridgeError: nil,
+        lastCommandFailure: nil
+      ),
+      [
+        DiagnosticsRow(
+          label: "Bridge",
+          status: "Connecting",
+          detail: "Requesting the latest system snapshot."
+        )
+      ]
+    )
   }
 
-  func testBuildsRowsForOverallScreenpipeAndDatabase() {
+  func testBuildsRowsForBridgeCommandAndHealth() {
     let rows = DiagnosticsPresenter.rows(
       from: SystemHealthViewModel(
         overallStatus: .degraded,
@@ -34,13 +48,40 @@ final class DiagnosticsViewTests: XCTestCase {
           active: false,
           ticksRemaining: nil
         )
+      ),
+      connectionState: .failed(
+        "Bridge schema version mismatch. Expected 1.0.0, received 2.0.0."
+      ),
+      bridgeError: "Bridge schema version mismatch. Expected 1.0.0, received 2.0.0.",
+      lastCommandFailure: BridgeCommandFailure(
+        kind: .importCoachingExchange,
+        message: "Command payload failed validation.",
+        issues: ["payload.raw_text: Required"],
+        status: .validationError
       )
     )
 
-    XCTAssertEqual(rows.count, 3)
-    XCTAssertEqual(rows[0], DiagnosticsRow(label: "Overall", status: "Degraded", detail: nil))
+    XCTAssertEqual(rows.count, 5)
+    XCTAssertEqual(
+      rows[0],
+      DiagnosticsRow(
+        label: "Bridge",
+        status: "Failed",
+        detail: "Bridge schema version mismatch. Expected 1.0.0, received 2.0.0."
+      )
+    )
     XCTAssertEqual(
       rows[1],
+      DiagnosticsRow(
+        label: "Command",
+        status: "Validation Error",
+        detail:
+          "import_coaching_exchange: Command payload failed validation.: payload.raw_text: Required"
+      )
+    )
+    XCTAssertEqual(rows[2], DiagnosticsRow(label: "Overall", status: "Degraded", detail: nil))
+    XCTAssertEqual(
+      rows[3],
       DiagnosticsRow(
         label: "Screenpipe",
         status: "Down",
@@ -48,7 +89,7 @@ final class DiagnosticsViewTests: XCTestCase {
       )
     )
     XCTAssertEqual(
-      rows[2],
+      rows[4],
       DiagnosticsRow(
         label: "Database",
         status: "Ok",

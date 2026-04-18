@@ -6,6 +6,7 @@ enum BridgeError: LocalizedError, Equatable {
   case invalidResponse
   case unexpectedStatusCode(Int)
   case invalidSystemStateEvent(String)
+  case unsupportedSchemaVersion(expected: SchemaVersion, actual: SchemaVersion)
 
   var errorDescription: String? {
     switch self {
@@ -19,6 +20,8 @@ enum BridgeError: LocalizedError, Equatable {
       "Bridge request failed with HTTP \(code)."
     case .invalidSystemStateEvent(let value):
       "Bridge emitted an invalid system_state event: \(value)"
+    case .unsupportedSchemaVersion(let expected, let actual):
+      "Bridge schema version mismatch. Expected \(expected), received \(actual)."
     }
   }
 }
@@ -442,6 +445,13 @@ struct CommandActionResult: Codable, Equatable {
   let status: CommandActionStatus
 }
 
+struct BridgeCommandFailure: Equatable {
+  let kind: CommandKind?
+  let message: String
+  let issues: [String]
+  let status: CommandActionStatus
+}
+
 enum BridgeClock {
   static func isoTimestamp(date: Date = Date()) -> String {
     let formatter = ISO8601DateFormatter()
@@ -453,10 +463,16 @@ enum BridgeClock {
 
 @MainActor
 final class BridgeClient: ObservableObject {
+  private struct EventSchemaProbe: Decodable {
+    let schemaVersion: SchemaVersion
+  }
+
   private struct SnapshotCursor: Equatable {
     let runtimeSessionId: String
     let streamSequence: Int
   }
+
+  static let supportedSchemaVersion: SchemaVersion = "1.0.0"
 
   enum ConnectionState: Equatable {
     case idle
@@ -471,6 +487,7 @@ final class BridgeClient: ObservableObject {
   @Published private(set) var connectionState: ConnectionState = .idle
   @Published private(set) var lastErrorDescription: String?
   @Published private(set) var latestState: SystemState?
+  @Published private(set) var lastCommandFailure: BridgeCommandFailure?
 
   let configuration: BridgeConfiguration
 
@@ -594,7 +611,20 @@ final class BridgeClient: ObservableObject {
       throw BridgeError.unexpectedStatusCode(response.statusCode)
     }
 
-    return try BridgeJSONCoding.decoder.decode(CommandActionResult.self, from: data)
+    let result = try BridgeJSONCoding.decoder.decode(CommandActionResult.self, from: data)
+
+    if result.status == .success {
+      lastCommandFailure = nil
+    } else {
+      lastCommandFailure = BridgeCommandFailure(
+        kind: result.kind,
+        message: result.message,
+        issues: result.issues ?? [],
+        status: result.status
+      )
+    }
+
+    return result
   }
 
   private func handle(event: ServerSentEvent) throws {
@@ -604,6 +634,14 @@ final class BridgeClient: ObservableObject {
 
     guard let data = event.data.data(using: .utf8) else {
       throw BridgeError.invalidSystemStateEvent("Event data was not UTF-8.")
+    }
+
+    let schemaProbe = try BridgeJSONCoding.decoder.decode(EventSchemaProbe.self, from: data)
+    guard schemaProbe.schemaVersion == Self.supportedSchemaVersion else {
+      throw BridgeError.unsupportedSchemaVersion(
+        expected: Self.supportedSchemaVersion,
+        actual: schemaProbe.schemaVersion
+      )
     }
 
     let state = try BridgeJSONCoding.decoder.decode(SystemState.self, from: data)

@@ -25,7 +25,7 @@ This task list reflects the tightened V1 MVP architecture:
 - [x] Introduce a thin app-side state store (`MenuBarState`, `DashboardState`, `PromptImportState`, `PendingNotificationState`, `ClarificationPanelState`, `SettingsState`) driven only by bridge payloads.
 - [x] Map the global TS `Mode` to the top-level SwiftUI router wrapper checking for `booting`, `no_plan`, `running`, `paused`, `degraded_screenpipe`, and `logic_error`.
 - [x] Build a small diagnostic UI referencing the `SystemHealthViewModel` detailing Screenpipe/Database connection integrity.
-- [ ] Surface bridge connectivity/version-mismatch problems and command result failures in the diagnostics UI instead of failing silently.
+- [x] Surface bridge connectivity/version-mismatch problems and command result failures in the diagnostics UI instead of failing silently.
 
 **Phase 1: Paste Sanitizer & Morning Flow**
 - [ ] Write a 20-line **Paste Sanitizer** String Extension. This function must catch manual copy/paste sloppiness before submission by automatically stripping markdown code fences (```json), stripping out conversational intro/outro dialogue, and normalizing smart quotes globally into standard quotation marks.
