@@ -34,6 +34,12 @@ export type {
 } from "./db/database.js";
 
 export {
+  backupSqliteDatabase,
+  exportAppDataAsJson,
+  purgeAllAppData,
+} from "./db/data-lifecycle.js";
+
+export {
   listAppliedMigrations,
   runMigrations,
   runStartupMigrations,
