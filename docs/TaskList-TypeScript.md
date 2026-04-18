@@ -32,7 +32,7 @@ By architecting the software with a strict boundary—**the headless TypeScript 
 - [x] Observation migrations: `observations`, `context_windows`, `episodes`, `classifications`, `progress_estimates`, `interventions`, and `intervention_outcomes`.
 - [x] Add a `JSON` column to the `classifications` table named `explainability` to dynamically store arrays of `{ code, detail, weight }`.
 - [x] Learning migrations (reduced for MVP): `daily_memory_notes` (Daily Memory layer), `durable_rules` (Long-term rules layer for user-confirmed patterns), `user_corrections`, `signal_weights`, and `rule_proposals`. *Drop vector retrieval indices for V1.* 
-- [ ] Implement `SettingsRepo`, `DailyPlanRepo`, `TaskRepo`, `FocusBlockRepo`, `ObservationRepo`, `EpisodeRepo`, `ClassificationRepo`, `ProgressRepo`, `InterventionRepo`, `CorrectionRepo`, `MemoryRepo`, `RuleProposalRepo`, and `PrivacyExclusionsRepo` with CRUD methods.
+- [x] Implement `SettingsRepo`, `DailyPlanRepo`, `TaskRepo`, `FocusBlockRepo`, `ObservationRepo`, `EpisodeRepo`, `ClassificationRepo`, `ProgressRepo`, `InterventionRepo`, `CorrectionRepo`, `MemoryRepo`, `RuleProposalRepo`, and `PrivacyExclusionsRepo` with CRUD methods.
 - [ ] Implement startup rule: if there is no imported daily plan to load, system top-level state enters `no_plan` mode; engines idle automatically.
 - [ ] Implement default privacy exclusions preset: upon first boot, automatically seed the `privacy_exclusions` table with standard regex patterns for password managers (1Password, Keychain) and common banking/checkout domains.
 - [ ] Keep transactions short, expose an explicit WAL checkpoint hook for maintenance, and implement bounded retry/backoff for transient `SQLITE_BUSY` cases.

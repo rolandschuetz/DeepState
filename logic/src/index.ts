@@ -52,6 +52,44 @@ export {
 } from "./diagnostics/logger.js";
 
 export {
+  ClassificationRepo,
+  CorrectionRepo,
+  DailyPlanRepo,
+  FocusBlockRepo,
+  GoalContractRepo,
+  InterventionRepo,
+  MemoryRepo,
+  ObservationRepo,
+  PrivacyExclusionsRepo,
+  ProgressRepo,
+  RuleProposalRepo,
+  SettingsRepo,
+  TaskRepo,
+  EpisodeRepo,
+} from "./repos/sqlite-repositories.js";
+
+export type {
+  AppSettingsRecord,
+  ClassificationRecord,
+  DailyMemoryNoteRecord,
+  DailyPlanRecord,
+  DurableRuleRecord,
+  EpisodeRecord,
+  FocusBlockRecord,
+  GoalContractRecord,
+  InterventionActionRecord,
+  InterventionOutcomeRecord,
+  InterventionRecord,
+  ObservationRecord,
+  PrivacyExclusionRecord,
+  ProgressEstimateRecord,
+  RuleProposalRecord,
+  SignalWeightRecord,
+  TaskContractRecord,
+  UserCorrectionRecord,
+} from "./repos/sqlite-repositories.js";
+
+export {
   isRuntimeEvaluationEnabled,
   runWhenModeIsRunning,
 } from "./runtime/mode-gate.js";
