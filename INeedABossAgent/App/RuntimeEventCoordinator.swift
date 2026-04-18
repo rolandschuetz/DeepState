@@ -9,6 +9,31 @@ struct NotificationActionContext: Equatable {
   let semanticAction: InterventionSemanticAction
 }
 
+struct MorningFlowTriggerEnvelope: Equatable {
+  let localDate: String
+  let openedAt: String
+
+  static func make(now: Date = Date()) -> Self {
+    let calendar = Calendar(identifier: .gregorian)
+    let localDateFormatter = DateFormatter()
+    localDateFormatter.calendar = calendar
+    localDateFormatter.locale = Locale(identifier: "en_US_POSIX")
+    localDateFormatter.timeZone = .current
+    localDateFormatter.dateFormat = "yyyy-MM-dd"
+
+    let localTimestampFormatter = DateFormatter()
+    localTimestampFormatter.calendar = calendar
+    localTimestampFormatter.locale = Locale(identifier: "en_US_POSIX")
+    localTimestampFormatter.timeZone = .current
+    localTimestampFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+
+    return MorningFlowTriggerEnvelope(
+      localDate: localDateFormatter.string(from: now),
+      openedAt: localTimestampFormatter.string(from: now)
+    )
+  }
+}
+
 enum RuntimeEventPresenter {
   static func notificationPermissionStatus(
     for authorizationStatus: UNAuthorizationStatus
@@ -84,6 +109,8 @@ final class RuntimeEventCoordinator: NSObject, ObservableObject {
   private var didStart = false
   private var lastReportedPermission: NotificationPermissionStatus?
   private var lastRuntimeSessionId: String?
+  private var lastAutomaticMorningFlowAttemptLocalDate: String?
+  private var lastAutoOpenedMorningFlowKey: String?
   private weak var bridgeClient: BridgeClient?
 
   init(notificationCenter: UNUserNotificationCenter = .current()) {
@@ -138,6 +165,7 @@ final class RuntimeEventCoordinator: NSObject, ObservableObject {
       dedupedNotificationKeys.removeAll()
       actionContextsByCompositeIdentifier.removeAll()
       clarificationHUDController.dismiss()
+      lastAutoOpenedMorningFlowKey = nil
       return
     }
 
@@ -146,6 +174,8 @@ final class RuntimeEventCoordinator: NSObject, ObservableObject {
       dedupedNotificationKeys.removeAll()
       actionContextsByCompositeIdentifier.removeAll()
       clarificationHUDController.dismiss()
+      lastAutomaticMorningFlowAttemptLocalDate = nil
+      lastAutoOpenedMorningFlowKey = nil
     }
 
     if RuntimeEventPresenter.shouldDeliverNotification(for: systemState) {
@@ -156,6 +186,13 @@ final class RuntimeEventCoordinator: NSObject, ObservableObject {
       clarification: systemState.clarificationHud,
       bridgeClient: bridgeClient
     )
+    autoOpenMorningFlowIfNeeded(for: systemState)
+    requestAutomaticMorningFlowIfNeeded()
+  }
+
+  func handleApplicationDidBecomeActive() async {
+    await refreshNotificationPermission()
+    requestAutomaticMorningFlowIfNeeded()
   }
 
   func requestDashboardOpen() {
@@ -256,6 +293,56 @@ final class RuntimeEventCoordinator: NSObject, ObservableObject {
           actionId: context.actionId
         )
       )
+    }
+  }
+
+  private func autoOpenMorningFlowIfNeeded(for systemState: SystemState) {
+    guard systemState.dashboard.morningExchange?.status == .available else {
+      return
+    }
+
+    guard systemState.dashboard.morningExchange?.promptText?.isEmpty == false else {
+      return
+    }
+
+    let key = "\(systemState.runtimeSessionId)::\(systemState.dashboard.header.localDate)"
+    guard lastAutoOpenedMorningFlowKey != key else {
+      return
+    }
+
+    lastAutoOpenedMorningFlowKey = key
+    requestDashboardOpen()
+    NSApp.activate(ignoringOtherApps: true)
+  }
+
+  private func requestAutomaticMorningFlowIfNeeded(now: Date = Date()) {
+    guard NSApp.isActive else {
+      return
+    }
+
+    guard let bridgeClient, bridgeClient.latestState != nil else {
+      return
+    }
+
+    let trigger = MorningFlowTriggerEnvelope.make(now: now)
+    guard lastAutomaticMorningFlowAttemptLocalDate != trigger.localDate else {
+      return
+    }
+
+    lastAutomaticMorningFlowAttemptLocalDate = trigger.localDate
+
+    Task {
+      do {
+        _ = try await bridgeClient.dispatchCommand(
+          RequestMorningFlowCommandPayload(
+            localDate: trigger.localDate,
+            openedAt: trigger.openedAt,
+            reason: .firstNotebookOpenAfter4AM
+          )
+        )
+      } catch {
+        lastAutomaticMorningFlowAttemptLocalDate = nil
+      }
     }
   }
 }

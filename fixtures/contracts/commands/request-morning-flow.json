@@ -1,0 +1,11 @@
+{
+  "command_id": "7626a4cb-1d01-4746-bf14-dca5a2a13266",
+  "kind": "request_morning_flow",
+  "payload": {
+    "local_date": "2026-04-18",
+    "opened_at": "2026-04-18T09:06:30",
+    "reason": "first_notebook_open_after_4am"
+  },
+  "schema_version": "1.0.0",
+  "sent_at": "2026-04-18T09:06:30Z"
+}

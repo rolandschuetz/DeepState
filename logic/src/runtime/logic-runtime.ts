@@ -12,8 +12,15 @@ import {
   handleResolveAmbiguityCommand,
 } from "../ambiguity/resolve-ambiguity.js";
 import { buildStartupSystemState } from "../bootstrap/startup-state.js";
+import {
+  applyClassificationHysteresis,
+  classifyContextWindow,
+  type DeterministicClassification,
+  type HysteresisMemory,
+} from "../classifier/focus-classifier.js";
 import type { RuntimeConfig } from "../config/runtime-config.js";
 import { loadRuntimeConfig } from "../config/runtime-config.js";
+import type { AggregatedContextWindow } from "../context/context-aggregator.js";
 import { openDatabase } from "../db/database.js";
 import type { SqliteDatabase } from "../db/database.js";
 import { purgeAllAppData } from "../db/data-lifecycle.js";
@@ -22,12 +29,25 @@ import { appMigrations } from "../db/app-migrations.js";
 import { runWalCheckpoint, withSqliteBusyRetry } from "../db/maintenance.js";
 import { runStartupMigrations } from "../db/migrations.js";
 import { createDiagnosticsLogSink, createModuleLogger, DiagnosticsLogStore } from "../diagnostics/logger.js";
+import { buildExplainabilityForDashboard } from "../explainability/explainability-generator.js";
 import { handleNotificationActionCommand } from "../interventions/intervention-outcomes.js";
-import { handleMorningFlowCommand } from "../planning/morning-flow.js";
+import { createOllamaClient } from "../local-ai/ollama-client.js";
+import {
+  buildAutomaticMorningContextPacket,
+  createMorningFlowState,
+  generateMorningPrompt,
+  handleMorningFlowCommand,
+  shouldTriggerMorningFlow,
+} from "../planning/morning-flow.js";
 import { seedDefaultPrivacyExclusions } from "../privacy/default-privacy-exclusions.js";
 import {
+  ClassificationRepo,
+  DailyPlanRepo,
+  FocusBlockRepo,
+  MemoryRepo,
   PrivacyExclusionsRepo,
   SettingsRepo,
+  TaskRepo,
 } from "../repos/sqlite-repositories.js";
 import { createBridgeServer } from "../server/bridge-server.js";
 import {
@@ -36,7 +56,11 @@ import {
   type ScreenpipeHealthProbe,
 } from "../screenpipe/client.js";
 import { createScreenpipeSearchPoller } from "../screenpipe/search-poller.js";
-import { applyPauseToSystemState } from "./runtime-guards.js";
+import {
+  decideLocalAiFallback,
+  retrieveRelevantDurableRules,
+  applyPauseToSystemState,
+} from "./runtime-guards.js";
 import { applyResumeToSystemState } from "./resume-state.js";
 import {
   deriveOverallHealthStatus,
@@ -52,6 +76,11 @@ import {
 import { createDefaultSystemState } from "../system-state/default-system-state.js";
 import { mergeObserveOnlySettings } from "./system-health-merge.js";
 import { createAsyncWorkQueue } from "./work-queue.js";
+import {
+  createInitialPhase5Memory,
+  runPhase5SlowTick,
+  type Phase5OrchestratorMemory,
+} from "./phase5-orchestrator.js";
 
 export type LogicRuntimeOptions = {
   config?: RuntimeConfig;
@@ -117,6 +146,74 @@ const finalizeSystemState = ({
   return systemStateSchema.parse(next);
 };
 
+type PersistedContextWindowRow = {
+  context_window_id: string;
+  ended_at: string;
+  started_at: string;
+  summary_json: string;
+};
+
+type PersistedContextWindow = AggregatedContextWindow & {
+  contextWindowId: string;
+};
+
+const buildTopEvidenceFromWindow = (window: AggregatedContextWindow): string[] =>
+  [
+    ...window.summary.windowTitles,
+    ...window.summary.urls,
+    ...window.summary.activeApps,
+    ...window.summary.keywords,
+    ...window.summary.uiText,
+  ]
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0)
+    .slice(0, 8);
+
+const loadUnclassifiedContextWindows = (
+  database: SqliteDatabase,
+): PersistedContextWindow[] => {
+  const rows = database
+    .prepare(
+      `
+        SELECT
+          cw.context_window_id,
+          cw.started_at,
+          cw.ended_at,
+          cw.summary_json
+        FROM context_windows cw
+        LEFT JOIN classifications c
+          ON c.context_window_id = cw.context_window_id
+        WHERE c.context_window_id IS NULL
+        ORDER BY cw.started_at ASC
+      `,
+    )
+    .all() as PersistedContextWindowRow[];
+
+  return rows.map((row) => {
+    const summary = JSON.parse(row.summary_json) as AggregatedContextWindow["summary"];
+    const dwellDurationSeconds = Math.max(
+      0,
+      Math.round((Date.parse(row.ended_at) - Date.parse(row.started_at)) / 1_000),
+    );
+
+    return {
+      contextWindowId: row.context_window_id,
+      dwellDurationSeconds,
+      endedAt: row.ended_at,
+      sequenceContext: {
+        next: null,
+        previous: null,
+      },
+      sourceRecordIds: summary.screenpipeRefs?.recordIds ?? [],
+      sourceRecords: [],
+      startedAt: row.started_at,
+      summary,
+    };
+  });
+};
+
+const localDayStartMs = (localDate: string): number => Date.parse(`${localDate}T00:00:00`);
+
 export const createLogicRuntime = (
   options: LogicRuntimeOptions = {},
 ): LogicRuntime => {
@@ -140,6 +237,21 @@ export const createLogicRuntime = (
     module: "import",
     sink: diagnosticsSink,
   });
+  const classifierLogger = createModuleLogger({
+    minLevel: config.logLevel,
+    module: "classifier",
+    sink: diagnosticsSink,
+  });
+  const interventionLogger = createModuleLogger({
+    minLevel: config.logLevel,
+    module: "intervention",
+    sink: diagnosticsSink,
+  });
+  const localAiLogger = createModuleLogger({
+    minLevel: config.logLevel,
+    module: "local_ai",
+    sink: diagnosticsSink,
+  });
 
   const database = openDatabase({ dbPath: config.dbPath });
   runStartupMigrations(database, appMigrations);
@@ -156,12 +268,24 @@ export const createLogicRuntime = (
     fetch: fetchImpl,
     schedulerBudgetMs: config.scheduler.screenpipeSearchBudgetMs,
   });
+  const ollamaClient = createOllamaClient({
+    baseUrl: config.localAi.baseUrl,
+    fetch: fetchImpl,
+    model: config.localAi.model,
+    timeoutMs: config.healthTimeouts.ollamaMs,
+  });
 
   let pollCursor: { lastSuccessfulIngestAt: string | null; recentRecordKeys: string[] } =
     {
       lastSuccessfulIngestAt: null,
       recentRecordKeys: [],
     };
+  let classificationMemory: HysteresisMemory = {
+    driftStreak: 0,
+    lastGoodContext: null,
+    previousRuntimeState: "uncertain",
+  };
+  let phase5Memory: Phase5OrchestratorMemory = createInitialPhase5Memory("uncertain");
 
   let lastScreenpipeProbe: ScreenpipeHealthProbe = {
     checkedAt: new Date().toISOString(),
@@ -236,16 +360,220 @@ export const createLogicRuntime = (
     });
   };
 
+  const recordLocalAiTransition = (status: "down" | "ok", message: string): void => {
+    recordTransitionIfChanged({
+      database,
+      lastByComponent: lastHealthByComponent,
+      transition: {
+        component: "local_ai",
+        message,
+        to: status,
+      },
+    });
+  };
+
+  const maybeGenerateAmbiguitySubtitle = async ({
+    classification,
+    tasks,
+    window,
+  }: {
+    classification: DeterministicClassification;
+    tasks: ReturnType<TaskRepo["listAll"]>;
+    window: AggregatedContextWindow;
+  }): Promise<string | null> => {
+    const durableRules = retrieveRelevantDurableRules({
+      durableRules: new MemoryRepo(database).listDurableRules(),
+      window,
+    });
+    const fallback = decideLocalAiFallback({
+      classification,
+      cooldownActive: false,
+      durableRules,
+      mode: currentState.mode,
+      paused: currentState.mode === "paused",
+      window,
+    });
+
+    if (!fallback.allow) {
+      localAiLogger.debug("Skipped Ollama ambiguity fallback.", {
+        reason: fallback.reason,
+      });
+      return null;
+    }
+
+    try {
+      const hint = await ollamaClient.generateAmbiguityHint({
+        activeApps: window.summary.activeApps,
+        keywords: window.summary.keywords,
+        taskTitles: tasks.map((task) => task.title),
+        urls: window.summary.urls,
+        windowTitles: window.summary.windowTitles,
+      });
+      recordLocalAiTransition("ok", `Ollama responded for ${config.localAi.model}.`);
+      return hint;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown Ollama generation failure.";
+      localAiLogger.warn("Ollama ambiguity fallback failed.", { message });
+      recordLocalAiTransition("down", message);
+      return null;
+    }
+  };
+
+  const classifyPendingWindows = async ({
+    nowIso,
+    planId,
+  }: {
+    nowIso: string;
+    planId: string;
+  }): Promise<{
+    classifiedWindows: Array<{
+      confidenceRatio: number | null;
+      contextWindowId: string;
+      dwellDurationSeconds: number;
+      endedAt: string;
+      isSupport: boolean;
+      matchedGoalId: string | null;
+      matchedTaskId: string | null;
+      runtimeState: SystemState["dashboard"]["current_focus"]["runtime_state"];
+      startedAt: string;
+      topEvidence: string[];
+    }>;
+    latestClassificationId: string | null;
+    latestRuntimeState: SystemState["dashboard"]["current_focus"]["runtime_state"];
+    latestWindow: AggregatedContextWindow | null;
+    subtitle: string | null;
+  }> => {
+    const windows = loadUnclassifiedContextWindows(database);
+    const tasks = new TaskRepo(database).listAll().filter((task) => task.planId === planId);
+
+    if (windows.length === 0 || tasks.length === 0) {
+      return {
+        classifiedWindows: [],
+        latestClassificationId: null,
+        latestRuntimeState: classificationMemory.previousRuntimeState,
+        latestWindow: null,
+        subtitle: null,
+      };
+    }
+
+    const classificationRepo = new ClassificationRepo(database);
+    const classifiedWindows: Array<{
+        confidenceRatio: number | null;
+        contextWindowId: string;
+      dwellDurationSeconds: number;
+      endedAt: string;
+      isSupport: boolean;
+      matchedGoalId: string | null;
+      matchedTaskId: string | null;
+      runtimeState: SystemState["dashboard"]["current_focus"]["runtime_state"];
+      startedAt: string;
+      topEvidence: string[];
+    }> = [];
+    let latestClassificationId: string | null = null;
+
+    for (const window of windows) {
+      const result = applyClassificationHysteresis({
+        classification: classifyContextWindow({
+          previousLastGoodContext: classificationMemory.lastGoodContext,
+          tasks: tasks.map((task) => ({
+            allowedSupportWork: task.allowedSupportWork,
+            goalId: task.goalId,
+            likelyDetours: task.likelyDetours,
+            successDefinition: task.successDefinition,
+            taskId: task.taskId,
+            title: task.title,
+          })),
+          window,
+        }),
+        memory: classificationMemory,
+      });
+      classificationMemory = result.memory;
+      const explainability = buildExplainabilityForDashboard({
+        confidenceRatio: result.classification.confidenceRatio,
+        raw: result.classification.explainability,
+      });
+      const classificationId = randomUUID();
+
+        classificationRepo.create({
+        classificationId,
+        classifiedAt: nowIso,
+        confidenceRatio: result.classification.confidenceRatio,
+        contextWindowId: window.contextWindowId,
+        explainability,
+        isSupport: result.classification.isSupport,
+        lastGoodContext: result.classification.lastGoodContext,
+        matchedGoalId: result.classification.matchedGoalId,
+        matchedTaskId: result.classification.matchedTaskId,
+        runtimeState: result.classification.runtimeState,
+      });
+
+      classifierLogger.info("Context window classified.", {
+        confidence_ratio: result.classification.confidenceRatio,
+        context_window_id: window.contextWindowId,
+        runtime_state: result.classification.runtimeState,
+      });
+
+      classifiedWindows.push({
+        confidenceRatio: result.classification.confidenceRatio,
+        contextWindowId: window.contextWindowId,
+        dwellDurationSeconds: window.dwellDurationSeconds,
+        endedAt: window.endedAt,
+        isSupport: result.classification.isSupport,
+        matchedGoalId: result.classification.matchedGoalId,
+        matchedTaskId: result.classification.matchedTaskId,
+        runtimeState: result.classification.runtimeState,
+        startedAt: window.startedAt,
+        topEvidence: buildTopEvidenceFromWindow(window),
+      });
+      latestClassificationId = classificationId;
+    }
+
+    const latestWindow = windows.at(-1) ?? null;
+    const latestClassification = classifiedWindows.at(-1) ?? null;
+    const subtitle =
+      latestWindow === null || latestClassification === null
+        ? null
+        : await maybeGenerateAmbiguitySubtitle({
+            classification: {
+              confidenceRatio: latestClassification.confidenceRatio ?? 0.1,
+              explainability: [],
+              isSupport: latestClassification.isSupport,
+              lastGoodContext: classificationMemory.lastGoodContext,
+              matchedGoalId: latestClassification.matchedGoalId,
+              matchedTaskId: latestClassification.matchedTaskId,
+              runtimeState: latestClassification.runtimeState,
+            },
+            tasks,
+            window: latestWindow,
+          });
+
+    return {
+      classifiedWindows,
+      latestClassificationId,
+      latestRuntimeState: latestClassification?.runtimeState ?? classificationMemory.previousRuntimeState,
+      latestWindow,
+      subtitle,
+    };
+  };
+
   const buildInitialState = async (): Promise<SystemState> => {
     const base = buildStartupSystemState({ database });
     lastScreenpipeProbe = await screenpipeClient.probeHealth();
+    const ollamaProbe = await ollamaClient.probe();
     void screenpipeClient.detectCapabilities(undefined, screenpipeLogger);
     recordScreenpipeTransition(lastScreenpipeProbe);
+    recordLocalAiTransition(ollamaProbe.status, ollamaProbe.message);
     const dbStatus = probeDatabaseStatus(database);
     recordDatabaseTransition(
       dbStatus,
       dbStatus === "ok" ? "Database responsive." : "Database probe failed.",
     );
+    classificationMemory = {
+      driftStreak: 0,
+      lastGoodContext: base.dashboard.current_focus.last_good_context,
+      previousRuntimeState: base.dashboard.current_focus.runtime_state,
+    };
+    phase5Memory = createInitialPhase5Memory(base.dashboard.current_focus.runtime_state);
 
     return finalizeSystemState({
       database,
@@ -408,9 +736,95 @@ export const createLogicRuntime = (
       slowTickLastRanAt,
       systemState: currentState,
     });
-    next = await runClassificationStep(next);
-    next = await runProgressStep(next);
-    next = await runInterventionStep(next);
+
+    if (currentState.mode === "running" && currentState.dashboard.plan !== null) {
+      const classificationPass = await classifyPendingWindows({
+        nowIso: tickAt,
+        planId: currentState.dashboard.plan.plan_id,
+      });
+      const tasks = new TaskRepo(database)
+        .listAll()
+        .filter((task) => task.planId === currentState.dashboard.plan?.plan_id);
+      const focusBlocks = new FocusBlockRepo(database)
+        .listAll()
+        .filter((block) => block.planId === currentState.dashboard.plan?.plan_id);
+
+      if (classificationPass.classifiedWindows.length > 0) {
+        const latestClassifiedWindow =
+          classificationPass.classifiedWindows[classificationPass.classifiedWindows.length - 1] ?? null;
+        const phase5Result = runPhase5SlowTick({
+          classificationId: classificationPass.latestClassificationId,
+          classificationRuntimeState: classificationPass.latestRuntimeState,
+          classifiedWindows: classificationPass.classifiedWindows,
+          database,
+          estimatedAtIso: tickAt,
+          focusBlocks,
+          lastGoodContext: classificationMemory.lastGoodContext,
+          localDayStartMs: localDayStartMs(currentState.dashboard.plan.local_date),
+          memory: phase5Memory,
+          milestoneScanEnabled: true,
+          mode: currentState.mode,
+          notificationPermissionGranted:
+            currentState.system_health.notifications.os_permission === "granted",
+          nowIso: tickAt,
+          nowMs: Date.parse(tickAt),
+          paused: false,
+          planId: currentState.dashboard.plan.plan_id,
+          taskForMilestoneInference:
+            latestClassifiedWindow?.matchedTaskId === null
+              ? null
+              : (tasks.find((task) => task.taskId === latestClassifiedWindow?.matchedTaskId) ?? null),
+          taskTitle:
+            latestClassifiedWindow?.matchedTaskId === null
+              ? null
+              : (tasks.find((task) => task.taskId === latestClassifiedWindow?.matchedTaskId)?.title ?? null),
+          tasks,
+          phase7: {
+            ambiguityCooldownActive: false,
+            currentWindow: classificationPass.latestWindow,
+            isLockedBoundary: false,
+            relatedEpisodeId: null,
+            slowTickDurationMs: config.scheduler.slowTickMs,
+            tasksForHud: tasks.map((task) => ({
+              taskId: task.taskId,
+              title: task.title,
+            })),
+          },
+        });
+        phase5Memory = phase5Result.memory;
+
+        if (phase5Result.decision.intervention !== null) {
+          interventionLogger.info("Intervention created from live classification.", {
+            kind: phase5Result.decision.intervention.kind,
+            source_classification_id: phase5Result.decision.intervention.sourceClassificationId,
+          });
+        }
+
+        if (classificationPass.subtitle !== null && phase5Result.pendingClarification !== null) {
+          database.prepare(
+            `
+              UPDATE pending_clarifications
+              SET hud_json = json_set(hud_json, '$.subtitle', ?)
+              WHERE clarification_id = ?
+            `,
+          ).run(classificationPass.subtitle, phase5Result.pendingClarification.clarificationId);
+        }
+      }
+
+      next = buildStartupSystemState({
+        database,
+        emittedAt: tickAt,
+        runtimeSessionId: currentState.runtime_session_id,
+        screenpipeHealth: lastScreenpipeProbe,
+      });
+      next = finalizeSystemState({
+        database,
+        fastTickLastRanAt,
+        screenpipeProbe: lastScreenpipeProbe,
+        slowTickLastRanAt,
+        systemState: next,
+      });
+    }
 
     publish({
       ...next,
@@ -512,6 +926,59 @@ export const createLogicRuntime = (
                   os_permission: command.payload.os_permission,
                 },
               },
+            }),
+          );
+          return;
+        }
+
+        case "request_morning_flow": {
+          const settingsRepo = new SettingsRepo(database);
+          const settings = settingsRepo.getById(1);
+
+          if (settings === null) {
+            throw new Error("app_settings row missing.");
+          }
+
+          const hasPlanForToday = new DailyPlanRepo(database)
+            .listAll()
+            .some((plan) => plan.localDate === command.payload.local_date);
+          const shouldTrigger = shouldTriggerMorningFlow(
+            {
+              hasPlanForToday,
+              hasTriggeredForDate: settings.morningFlowLastTriggeredLocalDate !== null,
+              triggeredLocalDate: settings.morningFlowLastTriggeredLocalDate,
+            },
+            {
+              localDate: command.payload.local_date,
+              openedAt: command.payload.opened_at,
+              reason: command.payload.reason,
+            },
+          );
+
+          if (!shouldTrigger) {
+            return;
+          }
+
+          const now = new Date().toISOString();
+          settingsRepo.update({
+            ...settings,
+            morningFlowLastTriggeredAt: now,
+            morningFlowLastTriggeredLocalDate: command.payload.local_date,
+            updatedAt: now,
+          });
+
+          const contextPacketText = buildAutomaticMorningContextPacket({
+            database,
+            localDate: command.payload.local_date,
+          });
+          const promptText = generateMorningPrompt(contextPacketText);
+          publish(
+            createMorningFlowState(currentState, {
+              causedByCommandId: command.command_id,
+              contextPacketText,
+              emittedAt: now,
+              localDate: command.payload.local_date,
+              promptText,
             }),
           );
           return;

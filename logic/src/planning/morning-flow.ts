@@ -11,8 +11,10 @@ import {
 import type { SqliteDatabase } from "../db/database.js";
 import {
   DailyPlanRepo,
+  MemoryRepo,
   GoalContractRepo,
   ImportAuditLogRepo,
+  PendingClarificationRepo,
   TaskRepo,
 } from "../repos/sqlite-repositories.js";
 import { buildStartupSystemState } from "../bootstrap/startup-state.js";
@@ -115,8 +117,11 @@ export const generateMorningPrompt = (contextPacketText: string): string =>
     contextPacketText,
   ].join("\n\n");
 
-export const parseMorningPlanExchange = (rawText: string): MorningPlanExchange => {
-  const parsed = parseCoachingExchange(rawText);
+export const parseMorningPlanExchange = (
+  rawText: string,
+  options: { fallbackLocalDate?: string } = {},
+): MorningPlanExchange => {
+  const parsed = parseCoachingExchange(rawText, options);
 
   if (parsed.exchange_type !== "morning_plan") {
     throw new CoachingExchangeParseError(
@@ -133,6 +138,7 @@ export const createMorningFlowState = (
     causedByCommandId?: string | null;
     contextPacketText: string;
     emittedAt: string;
+    localDate: string;
     promptText: string;
   },
 ): SystemState => ({
@@ -142,6 +148,7 @@ export const createMorningFlowState = (
     ...currentState.dashboard,
     header: {
       ...currentState.dashboard.header,
+      local_date: options.localDate,
       mode: "no_plan",
       summary_text: "Morning plan is ready to export.",
     },
@@ -150,6 +157,7 @@ export const createMorningFlowState = (
       context_packet_text: options.contextPacketText,
       prompt_text: options.promptText,
     },
+    plan: null,
   },
   emitted_at: options.emittedAt,
   menu_bar: {
@@ -164,6 +172,81 @@ export const createMorningFlowState = (
   mode: "no_plan",
   stream_sequence: currentState.stream_sequence + 1,
 });
+
+export const buildAutomaticMorningContextPacket = ({
+  database,
+  localDate,
+}: {
+  database: SqliteDatabase;
+  localDate: string;
+}): string => {
+  const memoryRepo = new MemoryRepo(database);
+  const importAuditLogRepo = new ImportAuditLogRepo(database);
+  const pendingClarificationRepo = new PendingClarificationRepo(database);
+  const dailyPlanRepo = new DailyPlanRepo(database);
+
+  const carryOverContext = dailyPlanRepo
+    .listAll()
+    .filter((plan) => plan.localDate < localDate)
+    .slice(-1)
+    .flatMap((plan) => {
+      const notes = plan.notesForTracker === null ? [] : [plan.notesForTracker];
+      return [`Previous plan: ${plan.localDate}`, ...notes];
+    });
+
+  const yesterdayDebriefOutcomes = importAuditLogRepo
+    .listAll()
+    .filter(
+      (entry) =>
+        entry.exchangeType === "evening_debrief"
+        && entry.accepted
+        && entry.localDate < localDate,
+    )
+    .slice(-1)
+    .flatMap((entry) => {
+      if (typeof entry.payload !== "object" || entry.payload === null) {
+        return [];
+      }
+
+      const taskOutcomes = (entry.payload as { task_outcomes?: { outcome_summary?: string }[] })
+        .task_outcomes ?? [];
+
+      return taskOutcomes
+        .map((taskOutcome) => taskOutcome.outcome_summary?.trim() ?? "")
+        .filter((summary) => summary.length > 0);
+    });
+
+  const unresolvedAmbiguities = pendingClarificationRepo
+    .listAll()
+    .filter((clarification) => clarification.status === "pending")
+    .map((clarification) => {
+      try {
+        const hud = JSON.parse(clarification.hudJson) as { prompt?: string };
+        return hud.prompt?.trim() ?? "";
+      } catch {
+        return "";
+      }
+    })
+    .filter((prompt) => prompt.length > 0);
+
+  return buildMorningContextPacket({
+    carryOverContext,
+    declaredMeetings: [],
+    durableRulesSafeToSurface: memoryRepo
+      .listDurableRules()
+      .filter((rule) => rule.confidence >= 0.5)
+      .slice(-5)
+      .map((rule) => rule.ruleText),
+    localDate,
+    openQuestions: memoryRepo
+      .listDailyMemoryNotes()
+      .filter((note) => note.localDate < localDate)
+      .slice(-5)
+      .map((note) => note.summaryText),
+    unresolvedAmbiguities,
+    yesterdayDebriefOutcomes,
+  });
+};
 
 const deletePlanGraph = (database: SqliteDatabase, planId: string): void => {
   database.prepare("DELETE FROM focus_blocks WHERE plan_id = ?").run(planId);
@@ -291,8 +374,9 @@ export const handleMorningFlowCommand = ({
   importedAt?: string;
   runtimeSessionId?: string;
 }): SystemState => {
-  void currentState;
-  const exchange = parseCoachingExchange(command.payload.raw_text);
+  const exchange = parseCoachingExchange(command.payload.raw_text, {
+    fallbackLocalDate: currentState.dashboard.header.local_date,
+  });
 
   if (exchange.exchange_type === "morning_plan") {
     return importMorningPlanExchange({

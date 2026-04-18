@@ -41,8 +41,11 @@ const writeSystemStateEvent = (
   response: ServerResponse<IncomingMessage>,
   systemState: SystemState,
 ): void => {
-  response.write(`event: ${SYSTEM_STATE_EVENT}\n`);
-  response.write(`data: ${JSON.stringify(systemState)}\n\n`);
+  const payload = `event: ${SYSTEM_STATE_EVENT}\r\ndata: ${JSON.stringify(systemState)}\r\n\r\n`;
+  response.write(payload);
+  console.log(
+    `[bridge-server] wrote system_state sequence=${systemState.stream_sequence} mode=${systemState.mode}`,
+  );
 };
 
 const parseJsonBody = async (request: IncomingMessage): Promise<unknown> => {
@@ -93,12 +96,17 @@ export const createBridgeServer = (
         Connection: "keep-alive",
         "Content-Type": "text/event-stream",
       });
+      response.flushHeaders();
+      response.socket?.setKeepAlive(true);
+      response.socket?.setNoDelay(true);
 
       clients.add(response);
+      console.log(`[bridge-server] stream client connected; clients=${clients.size}`);
       writeSystemStateEvent(response, currentState);
 
       request.on("close", () => {
         clients.delete(response);
+        console.log(`[bridge-server] stream client disconnected; clients=${clients.size}`);
       });
 
       return;

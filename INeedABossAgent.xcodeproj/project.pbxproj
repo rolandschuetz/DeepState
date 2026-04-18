@@ -307,6 +307,7 @@
 /* Begin PBXShellScriptBuildPhase section */
 		7BB388621E08464CA925A4A3 /* Embed Logic Runtime */ = {
 			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);
@@ -318,11 +319,12 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/LogicRuntime/INeedABossAgentLogic",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/LogicRuntime/INeedABossAgentNode",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/LogicRuntime/logic-runtime.cjs",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\nexport PATH=\"/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH\"\nexport NVM_DIR=\"$HOME/.nvm\"\nif [ -s \"$NVM_DIR/nvm.sh\" ]; then\n  . \"$NVM_DIR/nvm.sh\"\nfi\nif ! command -v node >/dev/null 2>&1; then\n  echo \"error: node not found for Embed Logic Runtime build phase\" >&2\n  exit 1\nfi\nif ! command -v npm >/dev/null 2>&1; then\n  echo \"error: npm not found for Embed Logic Runtime build phase\" >&2\n  exit 1\nfi\ncd \"$PROJECT_DIR/logic\"\nnpm run build:sea\nRUNTIME_DIR=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/LogicRuntime\"\nRUNTIME_BINARY=\"$RUNTIME_DIR/INeedABossAgentLogic\"\nmkdir -p \"$RUNTIME_DIR\"\ncp \"$PROJECT_DIR/logic/dist/INeedABossAgentLogic\" \"$RUNTIME_BINARY\"\nchmod +x \"$RUNTIME_BINARY\"\nif [ -n \"$EXPANDED_CODE_SIGN_IDENTITY\" ]; then\n  /usr/bin/codesign --force --sign \"$EXPANDED_CODE_SIGN_IDENTITY\" --timestamp=none --generate-entitlement-der \"$RUNTIME_BINARY\"\nfi\n";
+			shellScript = "set -e\nexport PATH=\"/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH\"\nexport NVM_DIR=\"$HOME/.nvm\"\nif [ -s \"$NVM_DIR/nvm.sh\" ]; then\n  . \"$NVM_DIR/nvm.sh\"\nfi\nif ! command -v node >/dev/null 2>&1; then\n  echo \"error: node not found for Embed Logic Runtime build phase\" >&2\n  exit 1\nfi\nif ! command -v npm >/dev/null 2>&1; then\n  echo \"error: npm not found for Embed Logic Runtime build phase\" >&2\n  exit 1\nfi\ncd \"$PROJECT_DIR/logic\"\nnpm run build:sea\nSOURCE_RUNTIME_DIR=\"$PROJECT_DIR/logic/dist/logic-runtime\"\nRUNTIME_DIR=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/LogicRuntime\"\nmkdir -p \"$RUNTIME_DIR\"\nrm -rf \"$RUNTIME_DIR\"\ncp -R \"$SOURCE_RUNTIME_DIR\" \"$RUNTIME_DIR\"\nchmod +x \"$RUNTIME_DIR/INeedABossAgentNode\"\nif [ -n \"$EXPANDED_CODE_SIGN_IDENTITY\" ]; then\n  find \"$RUNTIME_DIR\" \\( -name \"INeedABossAgentNode\" -o -name \"*.node\" \\) -print0 | while IFS= read -r -d '' code_object; do\n    /usr/bin/codesign --force --sign \"$EXPANDED_CODE_SIGN_IDENTITY\" --timestamp=none --generate-entitlement-der \"$code_object\"\n  done\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

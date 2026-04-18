@@ -172,6 +172,8 @@ export const runPhase5SlowTick = ({
     settingsRepo.update({
       ...(settings ?? {
         createdAt: nowIso,
+        morningFlowLastTriggeredAt: null,
+        morningFlowLastTriggeredLocalDate: null,
         observationRetentionDays: 14,
         observeOnlySeedVersion: 1,
         observeOnlyTicksRemaining: 0,

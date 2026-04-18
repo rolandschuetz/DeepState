@@ -58,6 +58,49 @@ final class BridgeClientTests: XCTestCase {
     )
   }
 
+  func testServerSentEventParserHandlesCarriageReturnDelimitedLines() {
+    var parser = ServerSentEventParser()
+
+    XCTAssertNil(parser.parse(line: "event: system_state\r"))
+    XCTAssertNil(parser.parse(line: "data: {\"schema_version\":\"1.0.0\"}\r"))
+
+    let event = parser.parse(line: "\r")
+
+    XCTAssertEqual(
+      event,
+      ServerSentEvent(
+        event: BridgeClient.systemStateEventName,
+        data: "{\"schema_version\":\"1.0.0\"}"
+      )
+    )
+  }
+
+  func testServerSentEventParserFlushesBufferedEventWhenNextEventStarts() {
+    var parser = ServerSentEventParser()
+
+    XCTAssertNil(parser.parse(line: "event: system_state"))
+    XCTAssertNil(parser.parse(line: "data: {\"stream_sequence\":1}"))
+
+    let event = parser.parse(line: "event: system_state")
+
+    XCTAssertEqual(
+      event,
+      ServerSentEvent(
+        event: BridgeClient.systemStateEventName,
+        data: "{\"stream_sequence\":1}"
+      )
+    )
+
+    XCTAssertNil(parser.parse(line: "data: {\"stream_sequence\":2}"))
+    XCTAssertEqual(
+      parser.finish(),
+      ServerSentEvent(
+        event: BridgeClient.systemStateEventName,
+        data: "{\"stream_sequence\":2}"
+      )
+    )
+  }
+
   func testConnectPublishesLatestSystemStateFromStream() async throws {
     let streamer = MockEventStreamTransport(events: [
       .init(event: "ignored", data: "{\"ignored\":true}"),

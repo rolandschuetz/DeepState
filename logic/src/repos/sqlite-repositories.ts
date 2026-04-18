@@ -132,6 +132,8 @@ const createCrudRepository = <TEntity, TId extends number | string>(
 
 export type AppSettingsRecord = {
   createdAt: string;
+  morningFlowLastTriggeredAt: string | null;
+  morningFlowLastTriggeredLocalDate: string | null;
   observationRetentionDays: number;
   observeOnlySeedVersion: number;
   observeOnlyTicksRemaining: number;
@@ -347,6 +349,8 @@ export class SettingsRepo {
     this.#repo = createCrudRepository(database, {
       fromRow: (row) => ({
         createdAt: row.created_at as string,
+        morningFlowLastTriggeredAt: (row.morning_flow_last_triggered_at ?? null) as string | null,
+        morningFlowLastTriggeredLocalDate: (row.morning_flow_last_triggered_local_date ?? null) as string | null,
         observationRetentionDays: row.observation_retention_days as number,
         observeOnlySeedVersion: (row.observe_only_seed_version ?? 0) as number,
         observeOnlyTicksRemaining: row.observe_only_ticks_remaining as number,
@@ -360,6 +364,8 @@ export class SettingsRepo {
       table: "app_settings",
       toRow: (entity) => ({
         created_at: entity.createdAt,
+        morning_flow_last_triggered_at: entity.morningFlowLastTriggeredAt,
+        morning_flow_last_triggered_local_date: entity.morningFlowLastTriggeredLocalDate,
         observation_retention_days: entity.observationRetentionDays,
         observe_only_seed_version: entity.observeOnlySeedVersion,
         observe_only_ticks_remaining: entity.observeOnlyTicksRemaining,
@@ -1062,6 +1068,20 @@ export class PendingClarificationRepo {
       .get(id) as SqliteRecord | undefined;
 
     return row === undefined ? null : this.#fromRow(row);
+  }
+
+  listAll(): PendingClarificationRecord[] {
+    return (
+      this.#database
+        .prepare(
+          `
+            SELECT *
+            FROM pending_clarifications
+            ORDER BY created_at ASC
+          `,
+        )
+        .all() as SqliteRecord[]
+    ).map((row) => this.#fromRow(row));
   }
 
   listPendingForPlan(planId: string): PendingClarificationRecord[] {

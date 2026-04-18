@@ -1,20 +1,67 @@
-import { copyFileSync, chmodSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, copyFileSync, chmodSync, mkdirSync, rmSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(__dirname, "..");
 const distDir = join(projectRoot, "dist");
-const bundlePath = join(distDir, "logic-runtime.cjs");
-const blobPath = join(distDir, "logic-runtime.blob");
-const binaryPath = join(distDir, "INeedABossAgentLogic");
-const seaConfigPath = join(distDir, "sea-config.json");
+const runtimeDir = join(distDir, "logic-runtime");
+const bundlePath = join(runtimeDir, "logic-runtime.cjs");
+const nodeBinaryPath = join(runtimeDir, "INeedABossAgentNode");
+const nodeModulesDir = join(runtimeDir, "node_modules");
+const runtimePackages = ["better-sqlite3", "bindings", "file-uri-to-path"];
+const require = createRequire(import.meta.url);
+
+function rebuildNativeDependency(packageName) {
+  const npmExecPath = process.env.npm_execpath;
+  if (npmExecPath) {
+    execFileSync(
+      process.execPath,
+      [npmExecPath, "rebuild", packageName],
+      { cwd: projectRoot, stdio: "inherit" },
+    );
+    return;
+  }
+
+  execFileSync(
+    "npm",
+    ["rebuild", packageName],
+    { cwd: projectRoot, stdio: "inherit" },
+  );
+}
+
+function ensureNativeDependencyMatchesCurrentNode() {
+  try {
+    const Database = require("better-sqlite3");
+    const database = new Database(":memory:");
+    database.close();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const code =
+      typeof error === "object" && error !== null && "code" in error
+        ? error.code
+        : undefined;
+
+    if (code !== "ERR_DLOPEN_FAILED" && !message.includes("NODE_MODULE_VERSION")) {
+      throw error;
+    }
+
+    console.warn(
+      `Rebuilding better-sqlite3 for Node ABI ${process.versions.modules}.`,
+    );
+    rebuildNativeDependency("better-sqlite3");
+    const Database = require("better-sqlite3");
+    const database = new Database(":memory:");
+    database.close();
+  }
+}
 
 mkdirSync(distDir, { recursive: true });
-for (const path of [bundlePath, blobPath, binaryPath, seaConfigPath]) {
-  rmSync(path, { force: true });
-}
+rmSync(runtimeDir, { force: true, recursive: true });
+mkdirSync(runtimeDir, { recursive: true });
+ensureNativeDependencyMatchesCurrentNode();
 
 execFileSync(
   "./node_modules/.bin/esbuild",
@@ -23,41 +70,21 @@ execFileSync(
     "--bundle",
     "--platform=node",
     "--format=cjs",
+    "--external:better-sqlite3",
     `--target=node${process.versions.node.split(".")[0]}`,
     `--outfile=${bundlePath}`,
   ],
   { cwd: projectRoot, stdio: "inherit" },
 );
 
-writeFileSync(
-  seaConfigPath,
-  JSON.stringify(
-    {
-      disableExperimentalSEAWarning: true,
-      main: bundlePath,
-      output: blobPath,
-    },
-    null,
-    2,
-  ),
-);
+copyFileSync(process.execPath, nodeBinaryPath);
+chmodSync(nodeBinaryPath, 0o755);
 
-execFileSync(process.execPath, ["--experimental-sea-config", seaConfigPath], {
-  cwd: projectRoot,
-  stdio: "inherit",
-});
-
-copyFileSync(process.execPath, binaryPath);
-chmodSync(binaryPath, 0o755);
-
-execFileSync(
-  "./node_modules/.bin/postject",
-  [
-    binaryPath,
-    "NODE_SEA_BLOB",
-    blobPath,
-    "--sentinel-fuse",
-    "NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2",
-  ],
-  { cwd: projectRoot, stdio: "inherit" },
-);
+mkdirSync(nodeModulesDir, { recursive: true });
+for (const packageName of runtimePackages) {
+  cpSync(
+    join(projectRoot, "node_modules", packageName),
+    join(nodeModulesDir, packageName),
+    { recursive: true },
+  );
+}

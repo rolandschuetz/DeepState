@@ -119,14 +119,32 @@ struct ServerSentEventParser {
   private var bufferedDataLines: [String] = []
 
   mutating func parse(line: String) -> ServerSentEvent? {
-    if line.isEmpty {
+    let normalizedLine = normalize(line)
+
+    if normalizedLine.isEmpty {
       return flush()
     }
 
-    if line.hasPrefix(":") {
+    if normalizedLine.hasPrefix(":") {
       return nil
     }
 
+    if normalizedLine.hasPrefix("event:") && bufferedDataLines.isEmpty == false {
+      let completedEvent = flush()
+      process(line: normalizedLine)
+      return completedEvent
+    }
+
+    process(line: normalizedLine)
+    return nil
+  }
+
+  mutating func finish() -> ServerSentEvent? {
+    flush()
+  }
+
+  private mutating func process(line: String) {
+    
     let field: Substring
     let value: Substring
 
@@ -152,12 +170,6 @@ struct ServerSentEventParser {
     default:
       break
     }
-
-    return nil
-  }
-
-  mutating func finish() -> ServerSentEvent? {
-    flush()
   }
 
   private mutating func flush() -> ServerSentEvent? {
@@ -174,6 +186,14 @@ struct ServerSentEventParser {
     bufferedEventName = nil
     bufferedDataLines.removeAll(keepingCapacity: true)
     return event
+  }
+
+  private func normalize(_ line: String) -> String {
+    if line.hasSuffix("\r") {
+      return String(line.dropLast())
+    }
+
+    return line
   }
 }
 
@@ -198,8 +218,13 @@ struct URLSessionEventStreamTransport: EventStreamTransport {
 
   func streamEvents(for request: URLRequest) -> AsyncThrowingStream<ServerSentEvent, Error> {
     AsyncThrowingStream { continuation in
-      let task = Task {
+      let task = Task.detached {
         do {
+          NSLog(
+            "Event stream transport opening SSE request to %@ with timeout %.2fs.",
+            request.url?.absoluteString ?? "<nil>",
+            request.timeoutInterval
+          )
           let (bytes, response) = try await session.bytes(for: request)
           guard let httpResponse = response as? HTTPURLResponse else {
             throw BridgeError.invalidResponse
@@ -208,9 +233,16 @@ struct URLSessionEventStreamTransport: EventStreamTransport {
             throw BridgeError.unexpectedStatusCode(httpResponse.statusCode)
           }
 
+          NSLog(
+            "Event stream transport connected to %@ with HTTP %d.",
+            request.url?.absoluteString ?? "<nil>",
+            httpResponse.statusCode
+          )
+
           var parser = ServerSentEventParser()
 
           for try await line in bytes.lines {
+            NSLog("Event stream transport received raw line: %@.", String(line))
             if let event = parser.parse(line: String(line)) {
               continuation.yield(event)
             }
@@ -222,6 +254,11 @@ struct URLSessionEventStreamTransport: EventStreamTransport {
 
           continuation.finish()
         } catch {
+          NSLog(
+            "Event stream transport failed for %@: %@.",
+            request.url?.absoluteString ?? "<nil>",
+            error.localizedDescription
+          )
           continuation.finish(throwing: error)
         }
       }
@@ -264,6 +301,7 @@ enum CommandKind: String, Codable, Equatable {
   case importCoachingExchange = "import_coaching_exchange"
   case notificationAction = "notification_action"
   case reportNotificationPermission = "report_notification_permission"
+  case requestMorningFlow = "request_morning_flow"
   case purgeAll = "purge_all"
 }
 
@@ -385,6 +423,20 @@ struct ReportNotificationPermissionCommandPayload: Codable, Equatable, BridgeCom
   static let kind: CommandKind = .reportNotificationPermission
 
   let osPermission: NotificationPermissionStatus
+}
+
+struct RequestMorningFlowCommandPayload: Codable, Equatable, BridgeCommandPayload {
+  static let kind: CommandKind = .requestMorningFlow
+
+  enum Reason: String, Codable, Equatable {
+    case firstNotebookOpenAfter4AM = "first_notebook_open_after_4am"
+    case manualStartDay = "manual_start_day"
+    case manualPlanReset = "manual_plan_reset"
+  }
+
+  let localDate: String
+  let openedAt: String
+  let reason: Reason
 }
 
 struct PurgeAllCommandPayload: Codable, Equatable, BridgeCommandPayload {
@@ -521,10 +573,16 @@ final class BridgeClient: ObservableObject {
     wantsConnection = true
 
     guard streamTask == nil else {
+      NSLog("Bridge connect skipped because a stream task already exists.")
       return
     }
 
-    connectionState = .connecting
+    NSLog(
+      "Bridge connect requested for stream=%@ command=%@.",
+      configuration.streamURL.absoluteString,
+      configuration.commandURL.absoluteString
+    )
+    setConnectionState(.connecting, reason: "connect() requested")
     lastErrorDescription = nil
 
     streamTask = Task { [weak self] in
@@ -538,10 +596,19 @@ final class BridgeClient: ObservableObject {
 
       while wantsConnection, Task.isCancelled == false {
         do {
-          connectionState = .connecting
+          NSLog(
+            "Bridge attempting stream connection to %@.",
+            configuration.streamURL.absoluteString
+          )
+          setConnectionState(.connecting, reason: "starting SSE request")
           let request = makeStreamRequest()
 
           for try await event in transport.streamEvents(for: request) {
+            NSLog(
+              "Bridge received event name=%@ bytes=%d.",
+              event.event ?? "<default>",
+              event.data.utf8.count
+            )
             try handle(event: event)
           }
 
@@ -549,14 +616,17 @@ final class BridgeClient: ObservableObject {
             break
           }
 
-          connectionState = .disconnected
+          NSLog("Bridge stream ended without cancellation; marking disconnected.")
+          setConnectionState(.disconnected, reason: "SSE stream ended cleanly")
         } catch is CancellationError {
-          connectionState = .idle
+          NSLog("Bridge stream task cancelled.")
+          setConnectionState(.idle, reason: "stream task cancelled")
           return
         } catch {
           let description = error.localizedDescription
+          NSLog("Bridge stream failed: %@.", description)
           lastErrorDescription = description
-          connectionState = .failed(description)
+          setConnectionState(.failed(description), reason: "stream attempt failed")
         }
 
         guard wantsConnection, Task.isCancelled == false, automaticallyReconnect else {
@@ -564,12 +634,21 @@ final class BridgeClient: ObservableObject {
         }
 
         do {
+          NSLog(
+            "Bridge waiting %.2fs before reconnect.",
+            Double(reconnectDelayNanoseconds) / 1_000_000_000
+          )
           try await Task.sleep(nanoseconds: reconnectDelayNanoseconds)
         } catch is CancellationError {
-          connectionState = .idle
+          NSLog("Bridge reconnect sleep cancelled.")
+          setConnectionState(.idle, reason: "reconnect sleep cancelled")
           return
         } catch {
-          connectionState = .failed(error.localizedDescription)
+          NSLog("Bridge reconnect sleep failed: %@.", error.localizedDescription)
+          setConnectionState(
+            .failed(error.localizedDescription),
+            reason: "reconnect sleep failed"
+          )
           return
         }
       }
@@ -580,7 +659,7 @@ final class BridgeClient: ObservableObject {
     wantsConnection = false
     streamTask?.cancel()
     streamTask = nil
-    connectionState = .idle
+    setConnectionState(.idle, reason: "disconnect() requested")
   }
 
   func dispatchCommand<Payload: BridgeCommandPayload>(
@@ -629,6 +708,7 @@ final class BridgeClient: ObservableObject {
 
   private func handle(event: ServerSentEvent) throws {
     guard event.event == nil || event.event == Self.systemStateEventName else {
+      NSLog("Bridge ignoring non-system event %@.", event.event ?? "<default>")
       return
     }
 
@@ -646,15 +726,27 @@ final class BridgeClient: ObservableObject {
 
     let state = try BridgeJSONCoding.decoder.decode(SystemState.self, from: data)
     if shouldAccept(state) {
+      NSLog(
+        "Bridge accepted state session=%@ sequence=%d mode=%@.",
+        state.runtimeSessionId,
+        state.streamSequence,
+        state.mode.rawValue
+      )
       latestSnapshotCursor = SnapshotCursor(
         runtimeSessionId: state.runtimeSessionId,
         streamSequence: state.streamSequence
       )
       latestState = state
+    } else {
+      NSLog(
+        "Bridge dropped stale state session=%@ sequence=%d.",
+        state.runtimeSessionId,
+        state.streamSequence
+      )
     }
 
     lastErrorDescription = nil
-    connectionState = .connected
+    setConnectionState(.connected, reason: "accepted system_state event")
   }
 
   private func makeStreamRequest() -> URLRequest {
@@ -676,5 +768,31 @@ final class BridgeClient: ObservableObject {
     }
 
     return state.streamSequence > latestSnapshotCursor.streamSequence
+  }
+
+  private func setConnectionState(_ newState: ConnectionState, reason: String) {
+    let previousState = connectionState
+    connectionState = newState
+    NSLog(
+      "Bridge connection state %@ -> %@ (%@).",
+      Self.describe(previousState),
+      Self.describe(newState),
+      reason
+    )
+  }
+
+  private static func describe(_ state: ConnectionState) -> String {
+    switch state {
+    case .idle:
+      return "idle"
+    case .connecting:
+      return "connecting"
+    case .connected:
+      return "connected"
+    case .disconnected:
+      return "disconnected"
+    case .failed(let message):
+      return "failed[\(message)]"
+    }
   }
 }

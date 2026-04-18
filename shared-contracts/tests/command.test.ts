@@ -92,6 +92,17 @@ describe("commandSchema", () => {
       },
       {
         schema_version: "1.0.0",
+        command_id: "7626a4cb-1d01-4746-bf14-dca5a2a13266",
+        sent_at: "2026-04-18T09:06:30Z",
+        kind: "request_morning_flow",
+        payload: {
+          local_date: "2026-04-18",
+          opened_at: "2026-04-18T09:06:30",
+          reason: "first_notebook_open_after_4am",
+        },
+      },
+      {
+        schema_version: "1.0.0",
         command_id: "98f78315-56d4-4bb6-8b1d-40190f48d7b4",
         sent_at: "2026-04-18T09:07:00Z",
         kind: "purge_all",
@@ -130,6 +141,22 @@ describe("commandSchema", () => {
         payload: {
           source: "manual_paste",
           raw_text: "",
+        },
+      }),
+    ).toThrow();
+  });
+
+  it("rejects invalid morning-flow local timestamps", () => {
+    expect(() =>
+      commandSchema.parse({
+        schema_version: "1.0.0",
+        command_id: "7626a4cb-1d01-4746-bf14-dca5a2a13266",
+        sent_at: "2026-04-18T09:06:30Z",
+        kind: "request_morning_flow",
+        payload: {
+          local_date: "2026-04-18",
+          opened_at: "2026-04-18T09:06:30Z",
+          reason: "first_notebook_open_after_4am",
         },
       }),
     ).toThrow();

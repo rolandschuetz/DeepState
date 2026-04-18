@@ -6,6 +6,7 @@ export type DiagnosticsModule =
   | "classifier"
   | "intervention"
   | "import"
+  | "local_ai"
   | "memory";
 
 export type DiagnosticsLogLevel = RuntimeConfig["logLevel"];

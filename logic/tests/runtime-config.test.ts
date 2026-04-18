@@ -17,7 +17,12 @@ describe("loadRuntimeConfig", () => {
       healthTimeouts: {
         bridgeMs: 2_000,
         databaseMs: 2_000,
+        ollamaMs: 15_000,
         screenpipeMs: 5_000,
+      },
+      localAi: {
+        baseUrl: "http://127.0.0.1:11434",
+        model: "gemma4:31b",
       },
       logLevel: "info",
       maintenanceEveryNSlowTicks: 10,
@@ -47,7 +52,12 @@ describe("loadRuntimeConfig", () => {
       healthTimeouts: {
         bridgeMs: 1_500,
         databaseMs: 2_500,
+        ollamaMs: 15_000,
         screenpipeMs: 4_500,
+      },
+      localAi: {
+        baseUrl: "http://127.0.0.1:11434",
+        model: "gemma4:31b",
       },
       logLevel: "debug",
       maintenanceEveryNSlowTicks: 10,

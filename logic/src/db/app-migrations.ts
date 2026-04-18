@@ -523,6 +523,19 @@ export const learningAppMigrations: SqliteMigration[] = [
     },
     version: 450,
   },
+  {
+    name: "add morning flow trigger tracking to app settings",
+    up: (database) => {
+      database.exec(`
+        ALTER TABLE app_settings
+          ADD COLUMN morning_flow_last_triggered_local_date TEXT;
+
+        ALTER TABLE app_settings
+          ADD COLUMN morning_flow_last_triggered_at TEXT;
+      `);
+    },
+    version: 460,
+  },
 ];
 
 export const appMigrations: SqliteMigration[] = [

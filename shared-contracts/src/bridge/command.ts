@@ -86,6 +86,19 @@ export const reportNotificationPermissionCommandSchema = commandBaseSchema.exten
   }),
 });
 
+export const requestMorningFlowCommandSchema = commandBaseSchema.extend({
+  kind: z.literal("request_morning_flow"),
+  payload: z.object({
+    local_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    opened_at: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/),
+    reason: z.enum([
+      "first_notebook_open_after_4am",
+      "manual_start_day",
+      "manual_plan_reset",
+    ]),
+  }),
+});
+
 export const purgeAllCommandSchema = commandBaseSchema.extend({
   kind: z.literal("purge_all"),
   payload: z.object({
@@ -101,6 +114,7 @@ export const commandSchema = z.discriminatedUnion("kind", [
   importCoachingExchangeCommandSchema,
   notificationActionCommandSchema,
   reportNotificationPermissionCommandSchema,
+  requestMorningFlowCommandSchema,
   purgeAllCommandSchema,
 ]);
 
@@ -116,6 +130,9 @@ export type NotificationActionCommand = z.infer<
 >;
 export type ReportNotificationPermissionCommand = z.infer<
   typeof reportNotificationPermissionCommandSchema
+>;
+export type RequestMorningFlowCommand = z.infer<
+  typeof requestMorningFlowCommandSchema
 >;
 export type PurgeAllCommand = z.infer<typeof purgeAllCommandSchema>;
 export type Command = z.infer<typeof commandSchema>;

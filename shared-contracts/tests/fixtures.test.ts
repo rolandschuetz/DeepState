@@ -42,6 +42,7 @@ describe("contract fixtures", () => {
       "contracts/commands/import-coaching-exchange.json",
       "contracts/commands/notification-action.json",
       "contracts/commands/report-notification-permission.json",
+      "contracts/commands/request-morning-flow.json",
       "contracts/commands/purge-all.json",
     ];
 

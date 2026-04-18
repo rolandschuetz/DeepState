@@ -105,6 +105,19 @@ final class BridgeContractCompatibilityTests: XCTestCase {
     )
 
     try assertCommandFixture(
+      named: "request-morning-flow.json",
+      envelope: CommandEnvelope(
+        commandId: "7626a4cb-1d01-4746-bf14-dca5a2a13266",
+        sentAt: "2026-04-18T09:06:30Z",
+        payload: RequestMorningFlowCommandPayload(
+          localDate: "2026-04-18",
+          openedAt: "2026-04-18T09:06:30",
+          reason: .firstNotebookOpenAfter4AM
+        )
+      )
+    )
+
+    try assertCommandFixture(
       named: "purge-all.json",
       envelope: CommandEnvelope(
         commandId: "98f78315-56d4-4bb6-8b1d-40190f48d7b4",

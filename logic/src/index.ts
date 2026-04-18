@@ -182,6 +182,7 @@ export {
 } from "./planning/evening-flow.js";
 
 export {
+  buildAutomaticMorningContextPacket,
   buildMorningContextPacket,
   createMorningFlowState,
   generateMorningPrompt,

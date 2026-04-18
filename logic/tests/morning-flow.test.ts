@@ -174,11 +174,52 @@ describe("morning flow planning", () => {
     ).toThrow(/schema validation/i);
   });
 
+  it("normalizes common LLM import drift before schema validation", () => {
+    expect(
+      parseCoachingExchange(
+        JSON.stringify({
+          notesForTracker: "Single priority only.",
+          tasks: [
+            {
+              title: "Capture a local end-to-end demo",
+              successDefinition: "Local screen capture plus audio demo exists.",
+              totalRemainingEffortSeconds: null,
+              intendedWorkSecondsToday: 5400,
+              progressKind: "artifact_based",
+              allowedSupportWork: ["Research current import behavior"],
+              likelyDetoursThatStillCount: ["UI polish for the prototype"],
+            },
+          ],
+          totalIntendedWorkSeconds: 5400,
+        }),
+        { fallbackLocalDate: "2026-04-18" },
+      ),
+    ).toEqual({
+      schema_version: "1.0.0",
+      exchange_type: "morning_plan",
+      local_date: "2026-04-18",
+      total_intended_work_seconds: 5400,
+      notes_for_tracker: "Single priority only.",
+      tasks: [
+        {
+          title: "Capture a local end-to-end demo",
+          success_definition: "Local screen capture plus audio demo exists.",
+          total_remaining_effort_seconds: null,
+          intended_work_seconds_today: 5400,
+          progress_kind: "artifact_based",
+          allowed_support_work: ["Research current import behavior"],
+          likely_detours_that_still_count: ["UI polish for the prototype"],
+        },
+      ],
+    });
+  });
+
   it("creates a morning-flow export state from no_plan mode", () => {
     const state = createMorningFlowState(createDefaultSystemState(), {
       causedByCommandId: "c7942526-57a3-4ccb-a4da-2480b496759c",
       contextPacketText: "{\n  \"local_date\": \"2026-04-18\"\n}",
       emittedAt: "2026-04-18T08:00:00Z",
+      localDate: "2026-04-18",
       promptText: "Return strict JSON only.",
     });
 

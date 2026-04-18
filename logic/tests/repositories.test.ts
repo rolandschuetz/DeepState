@@ -96,6 +96,8 @@ describe("sqlite repositories", () => {
       settingsRepo.update({
         ...(settings ?? {
           createdAt: "2026-04-18T00:00:00Z",
+          morningFlowLastTriggeredAt: null,
+          morningFlowLastTriggeredLocalDate: null,
           observationRetentionDays: 14,
           observeOnlySeedVersion: 1,
           observeOnlyTicksRemaining: 75,

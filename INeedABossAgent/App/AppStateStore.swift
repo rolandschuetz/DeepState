@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 
 struct MenuBarState: Equatable {
@@ -87,9 +88,19 @@ final class AppStateStore: ObservableObject {
 
   func apply(_ systemState: SystemState?) {
     guard let systemState else {
+      NSLog("AppStateStore resetting because systemState is nil.")
       reset()
       return
     }
+
+    NSLog(
+      "AppStateStore applying session=%@ sequence=%d mode=%@ dashboard=%@ intervention=%@.",
+      systemState.runtimeSessionId,
+      systemState.streamSequence,
+      systemState.mode.rawValue,
+      systemState.dashboard.header.summaryText,
+      systemState.intervention?.title ?? "<nil>"
+    )
 
     menuBarState = MenuBarState(
       runtimeSessionId: systemState.runtimeSessionId,
@@ -126,11 +137,44 @@ final class AppStateStore: ObservableObject {
   }
 
   private func reset() {
+    NSLog("AppStateStore reset all published view state to empty.")
     menuBarState = .empty
     dashboardState = .empty
     promptImportState = .empty
     pendingNotificationState = .empty
     clarificationPanelState = .empty
     settingsState = .empty
+  }
+}
+
+@MainActor
+final class BridgeStateObserver: ObservableObject {
+  private var latestStateCancellable: AnyCancellable?
+
+  func bind(
+    bridgeClient: BridgeClient,
+    onLatestState: @escaping (SystemState?) -> Void
+  ) {
+    latestStateCancellable = bridgeClient.$latestState
+      .prepend(bridgeClient.latestState)
+      .sink { latestState in
+        NSLog(
+          "App observed latestState update session=%@ sequence=%@.",
+          latestState?.runtimeSessionId ?? "<nil>",
+          latestState.map { String($0.streamSequence) } ?? "<nil>"
+        )
+        onLatestState(latestState)
+      }
+  }
+
+  func bind(
+    bridgeClient: BridgeClient,
+    appStateStore: AppStateStore,
+    runtimeEventCoordinator: RuntimeEventCoordinator
+  ) {
+    bind(bridgeClient: bridgeClient) { latestState in
+        appStateStore.apply(latestState)
+        runtimeEventCoordinator.handle(systemState: latestState)
+    }
   }
 }

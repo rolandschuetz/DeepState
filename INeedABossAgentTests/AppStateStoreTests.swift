@@ -2,6 +2,39 @@ import XCTest
 
 @MainActor
 final class AppStateStoreTests: XCTestCase {
+  func testBridgeStateObserverProjectsBridgeSnapshotsIntoStore() throws {
+    let store = AppStateStore()
+    let observer = BridgeStateObserver()
+    let client = BridgeClient(
+      configuration: makeConfiguration(),
+      transport: InlineEventStreamTransport(events: [
+        .init(
+          event: BridgeClient.systemStateEventName,
+          data: try fixtureString(named: "system-state.running.json")
+        ),
+      ]),
+      automaticallyReconnect: false
+    )
+
+    observer.bind(bridgeClient: client) { latestState in
+      store.apply(latestState)
+    }
+
+    client.connect()
+
+    let expectation = expectation(description: "store applies connected runtime state")
+    Task { @MainActor in
+      while store.dashboardState.mode != .running {
+        await Task.yield()
+      }
+      expectation.fulfill()
+    }
+
+    wait(for: [expectation], timeout: 1.0)
+    XCTAssertEqual(store.dashboardState.mode, .running)
+    XCTAssertEqual(store.menuBarState.viewModel?.primaryLabel, "Checkout redesign")
+  }
+
   func testApplyProjectsSystemStateIntoThinBuckets() throws {
     let store = AppStateStore()
     let systemState = try loadFixtureState()
@@ -57,9 +90,40 @@ final class AppStateStoreTests: XCTestCase {
     return try BridgeJSONCoding.decoder.decode(SystemState.self, from: data)
   }
 
+  private func fixtureString(named name: String) throws -> String {
+    let fixtureURL =
+      repositoryRootURL
+      .appendingPathComponent("fixtures")
+      .appendingPathComponent("contracts")
+      .appendingPathComponent(name)
+    return try String(contentsOf: fixtureURL, encoding: .utf8)
+  }
+
+  private func makeConfiguration() -> BridgeConfiguration {
+    let baseURL = URL(string: "http://127.0.0.1:8787")!
+    return BridgeConfiguration(
+      baseURL: baseURL,
+      streamURL: baseURL.appendingPathComponent("stream"),
+      commandURL: baseURL.appendingPathComponent("command")
+    )
+  }
+
   private var repositoryRootURL: URL {
     URL(fileURLWithPath: #filePath)
       .deletingLastPathComponent()
       .deletingLastPathComponent()
+  }
+}
+
+private struct InlineEventStreamTransport: EventStreamTransport {
+  let events: [ServerSentEvent]
+
+  func streamEvents(for request: URLRequest) -> AsyncThrowingStream<ServerSentEvent, Error> {
+    AsyncThrowingStream { continuation in
+      for event in events {
+        continuation.yield(event)
+      }
+      continuation.finish()
+    }
   }
 }

@@ -178,6 +178,9 @@ struct MenuBarExtraView: View {
       connectionState: bridgeClient.connectionState,
       menuBarState: appStateStore.menuBarState
     )
+    let allowedActions = appStateStore.menuBarState.viewModel?.allowedActions
+    let hasMorningPrompt = appStateStore.promptImportState.morningExchange?.promptText?.isEmpty == false
+    let hasEveningPrompt = appStateStore.promptImportState.eveningExchange?.promptText?.isEmpty == false
 
     VStack(alignment: .leading, spacing: 10) {
       VStack(alignment: .leading, spacing: 4) {
@@ -227,6 +230,37 @@ struct MenuBarExtraView: View {
           }
         }
         .disabled(dropdownContent.canTakeBreak == false)
+      }
+      .font(.caption)
+
+      HStack {
+        Button("Start Morning Briefing") {
+          NSApp.activate(ignoringOtherApps: true)
+          openWindow(id: DashboardWindowRoute.id)
+
+          guard hasMorningPrompt == false else {
+            return
+          }
+
+          let trigger = MorningFlowTriggerEnvelope.make()
+
+          Task {
+            _ = try? await bridgeClient.dispatchCommand(
+              RequestMorningFlowCommandPayload(
+                localDate: trigger.localDate,
+                openedAt: trigger.openedAt,
+                reason: .manualStartDay
+              )
+            )
+          }
+        }
+        .disabled((allowedActions?.canOpenMorningFlow ?? false) == false && hasMorningPrompt == false)
+
+        Button("Start Evening Briefing") {
+          NSApp.activate(ignoringOtherApps: true)
+          openWindow(id: DashboardWindowRoute.id)
+        }
+        .disabled((allowedActions?.canOpenEveningFlow ?? false) == false && hasEveningPrompt == false)
       }
       .font(.caption)
 

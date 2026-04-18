@@ -10,6 +10,9 @@ const runtimeConfigEnvSchema = z.object({
   INEEDABOSSAGENT_LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
   INEEDABOSSAGENT_MAINTENANCE_EVERY_N_SLOW_TICKS: z.coerce.number().int().min(1).default(10),
   INEEDABOSSAGENT_FAST_TICK_MS: z.coerce.number().int().min(1_000).default(15_000),
+  INEEDABOSSAGENT_OLLAMA_BASE_URL: z.url().default("http://127.0.0.1:11434"),
+  INEEDABOSSAGENT_OLLAMA_MODEL: z.string().min(1).default("gemma4:31b"),
+  INEEDABOSSAGENT_OLLAMA_TIMEOUT_MS: z.coerce.number().int().min(1_000).default(15_000),
   INEEDABOSSAGENT_SCREENPIPE_BASE_URL: z.url().default("http://127.0.0.1:3030"),
   INEEDABOSSAGENT_SCREENPIPE_HEALTH_TIMEOUT_MS: z.coerce.number().int().positive().default(5_000),
   INEEDABOSSAGENT_SCREENPIPE_SEARCH_BUDGET_MS: z.coerce.number().int().min(1_000).default(12_000),
@@ -22,7 +25,12 @@ export type RuntimeConfig = {
   healthTimeouts: {
     bridgeMs: number;
     databaseMs: number;
+    ollamaMs: number;
     screenpipeMs: number;
+  };
+  localAi: {
+    baseUrl: string;
+    model: string;
   };
   logLevel: "debug" | "info" | "warn" | "error";
   maintenanceEveryNSlowTicks: number;
@@ -48,7 +56,12 @@ export const loadRuntimeConfig = (
     healthTimeouts: {
       bridgeMs: parsed.INEEDABOSSAGENT_BRIDGE_HEALTH_TIMEOUT_MS,
       databaseMs: parsed.INEEDABOSSAGENT_DATABASE_HEALTH_TIMEOUT_MS,
+      ollamaMs: parsed.INEEDABOSSAGENT_OLLAMA_TIMEOUT_MS,
       screenpipeMs: parsed.INEEDABOSSAGENT_SCREENPIPE_HEALTH_TIMEOUT_MS,
+    },
+    localAi: {
+      baseUrl: parsed.INEEDABOSSAGENT_OLLAMA_BASE_URL.replace(/\/+$/, ""),
+      model: parsed.INEEDABOSSAGENT_OLLAMA_MODEL,
     },
     logLevel: parsed.INEEDABOSSAGENT_LOG_LEVEL,
     maintenanceEveryNSlowTicks: parsed.INEEDABOSSAGENT_MAINTENANCE_EVERY_N_SLOW_TICKS,

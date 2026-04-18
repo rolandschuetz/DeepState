@@ -279,6 +279,7 @@ struct DashboardWindowView: View {
         ScrollView {
           VStack(alignment: .leading, spacing: 20) {
             dashboardHeader(dashboard.header)
+            briefingSection(dashboard)
             notificationPermissionWarningSection
             currentFocusSection(dashboard.currentFocus)
             progressSection(dashboard)
@@ -307,6 +308,72 @@ struct DashboardWindowView: View {
       }
     }
     .frame(minWidth: 760, minHeight: 860)
+  }
+
+  private func briefingSection(_ dashboard: DashboardViewModel) -> some View {
+    let allowedActions = appStateStore.menuBarState.viewModel?.allowedActions
+    let hasMorningPrompt = dashboard.morningExchange?.promptText?.isEmpty == false
+    let hasEveningPrompt = dashboard.eveningExchange?.promptText?.isEmpty == false
+
+    return VStack(alignment: .leading, spacing: 12) {
+      Text("Briefings")
+        .font(.title2.weight(.semibold))
+
+      HStack {
+        Button("Start Morning Briefing") {
+          guard hasMorningPrompt == false else {
+            return
+          }
+
+          let trigger = MorningFlowTriggerEnvelope.make()
+
+          Task {
+            _ = try? await bridgeClient.dispatchCommand(
+              RequestMorningFlowCommandPayload(
+                localDate: trigger.localDate,
+                openedAt: trigger.openedAt,
+                reason: .manualStartDay
+              )
+            )
+          }
+        }
+        .disabled((allowedActions?.canOpenMorningFlow ?? false) == false && hasMorningPrompt == false)
+
+        Button("Start Evening Briefing") {
+        }
+        .disabled((allowedActions?.canOpenEveningFlow ?? false) == false && hasEveningPrompt == false)
+      }
+
+      if hasMorningPrompt == false, hasEveningPrompt == false {
+        Text("No briefing prompt is currently available.")
+          .font(.subheadline)
+          .foregroundStyle(.secondary)
+      }
+
+      MorningFlowView(
+        morningExchange: dashboard.morningExchange,
+        onImport: { payload in
+          do {
+            let result = try await bridgeClient.dispatchCommand(payload)
+            return MorningFlowPresenter.importOutcome(from: result)
+          } catch {
+            return MorningFlowPresenter.importOutcome(from: error)
+          }
+        }
+      )
+
+      EveningDebriefView(
+        eveningExchange: dashboard.eveningExchange,
+        onImport: { payload in
+          do {
+            let result = try await bridgeClient.dispatchCommand(payload)
+            return MorningFlowPresenter.importOutcome(from: result)
+          } catch {
+            return MorningFlowPresenter.importOutcome(from: error)
+          }
+        }
+      )
+    }
   }
 
   private var settingsSection: some View {
