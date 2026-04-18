@@ -16,7 +16,7 @@ By architecting the software with a strict boundary—**the headless TypeScript 
 - [x] Define a single inbound `Command` schema for `POST /command` using a type discriminator: `pause`, `resume`, `update_exclusions`, `resolve_ambiguity`, `import_coaching_exchange`, `notification_action`, `purge_all`.
 - [x] Define unified `CoachingExchange` import schema with an `exchange_type: "morning_plan" | "evening_debrief"` discriminator and an explicit `schema_version` field.
 - [x] Create JSON fixture payloads and golden tests for all inbound/outbound contracts so Swift validates against the same examples.
-- [ ] Emit JSON Schema snapshots for bridge payloads and import payloads so contract drift is catchable in CI.
+- [x] Emit JSON Schema snapshots for bridge payloads and import payloads so contract drift is catchable in CI.
 - [ ] Set up HTTP server scaffolding with `GET /stream` (SSE) and `POST /command`. Keep `/health` and `/diagnostics` for internal probes only.
 - [ ] Add correlation IDs and typed action result envelopes (`success`, `validation_error`, `retryable_failure`, `fatal_failure`) for async command flows.
 - [ ] Create a central mode gate utility so classification, intervention, and progress logic evaluate **only** if `mode === "running"`.
