@@ -1,4 +1,10 @@
-/.DS_Store
+DerivedData/
+.build/
+*.xcuserstate
+xcuserdata/
 /logic/node_modules/
 /logic/coverage/
 /logic/dist/
+/shared-contracts/node_modules/
+/shared-contracts/coverage/
+/shared-contracts/dist/

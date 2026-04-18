@@ -8,7 +8,7 @@ By architecting the software with a strict boundary—**the headless TypeScript 
 **Phase 0: Contracts, Fixtures, and Health**
 - [x] Initialize `logic/` Node+TS project with strict mode and `vitest`.
 - [x] Create companion workspace folders for `shared-contracts/`, `fixtures/`, and `scripts/` so schemas, sample payloads, and migration/test helpers stay versioned outside UI-specific code.
-- [ ] Define core Zod schemas for domain primitives (`Timestamp`, `Confidence`, `HealthStatus`).
+- [x] Define core Zod schemas for domain primitives (`Timestamp`, `Confidence`, `HealthStatus`).
 - [ ] Define rigid top-level `Mode` enum: `booting | no_plan | running | paused | degraded_screenpipe | logic_error`.
 - [ ] Define simplified 5-state runtime state enum: `aligned | uncertain | soft_drift | hard_drift | paused`. 
 - [ ] Add companion flags to the classification: `is_support: boolean` (e.g. support work is just `aligned` + `is_support: true`).
