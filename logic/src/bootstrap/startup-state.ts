@@ -6,6 +6,12 @@ import {
 } from "@ineedabossagent/shared-contracts";
 
 import type { SqliteDatabase } from "../db/database.js";
+import {
+  buildEveningDebriefPacket,
+  buildReviewQueueFromDatabase,
+  generateEveningPrompt,
+  hasAcceptedEveningDebriefForLocalDate,
+} from "../planning/evening-debrief-context.js";
 import { DailyPlanRepo, TaskRepo } from "../repos/sqlite-repositories.js";
 import {
   applyScreenpipeHealthToSystemState,
@@ -52,6 +58,7 @@ export const buildStartupSystemState = ({
           prompt_text: null,
         },
         plan: null,
+        review_queue: buildReviewQueueFromDatabase(database),
       },
       emitted_at: emittedAt,
       menu_bar: {
@@ -92,6 +99,21 @@ export const buildStartupSystemState = ({
       total_remaining_effort_seconds: task.totalRemainingEffortSeconds,
     }));
 
+  const eveningDebriefDone = hasAcceptedEveningDebriefForLocalDate(database, latestPlan.localDate);
+
+  let debriefPacketText: string | null = null;
+  let eveningPromptText: string | null = null;
+
+  if (!eveningDebriefDone) {
+    debriefPacketText = buildEveningDebriefPacket({
+      database,
+      localDate: latestPlan.localDate,
+      plan: latestPlan,
+      planId: latestPlan.planId,
+    });
+    eveningPromptText = generateEveningPrompt(debriefPacketText);
+  }
+
   const systemState = systemStateSchema.parse({
     ...baseState,
     dashboard: {
@@ -107,10 +129,17 @@ export const buildStartupSystemState = ({
         context_packet_text: null,
         prompt_text: null,
       },
-      evening_exchange: {
-        ...baseState.dashboard.evening_exchange,
-        status: "available",
-      },
+      evening_exchange: eveningDebriefDone
+        ? {
+            debrief_packet_text: null,
+            prompt_text: null,
+            status: "completed",
+          }
+        : {
+            debrief_packet_text: debriefPacketText,
+            prompt_text: eveningPromptText,
+            status: "available",
+          },
       plan: {
         imported_at: latestPlan.importedAt,
         local_date: latestPlan.localDate,
@@ -119,6 +148,7 @@ export const buildStartupSystemState = ({
         tasks: plannedTasks,
         total_intended_work_seconds: latestPlan.totalIntendedWorkSeconds,
       },
+      review_queue: buildReviewQueueFromDatabase(database),
     },
     emitted_at: emittedAt,
     menu_bar: {

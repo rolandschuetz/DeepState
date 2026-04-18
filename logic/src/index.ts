@@ -166,13 +166,27 @@ export {
 } from "./diagnostics/logger.js";
 
 export {
-  buildMorningContextPacket,
   CoachingExchangeParseError,
+  parseCoachingExchange,
+} from "./planning/coaching-exchange-parse.js";
+
+export {
+  buildEveningDebriefPacket,
+  buildReviewQueueFromDatabase,
+  explainabilityBulletsForEpisode,
+  generateEveningPrompt,
+  hasAcceptedEveningDebriefForLocalDate,
+  importEveningDebriefExchange,
+  parseEveningDebriefExchange,
+  planExistsForLocalDate,
+} from "./planning/evening-flow.js";
+
+export {
+  buildMorningContextPacket,
   createMorningFlowState,
   generateMorningPrompt,
   handleMorningFlowCommand,
   importMorningPlanExchange,
-  parseCoachingExchange,
   parseMorningPlanExchange,
   shouldTriggerMorningFlow,
 } from "./planning/morning-flow.js";

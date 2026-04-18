@@ -55,6 +55,7 @@ export type {
 } from "./bridge/coaching-exchange.js";
 
 export type {
+  DurableRuleReviewItem,
   ExplainabilityItem,
   PrivacyExclusionEntry,
   SystemState,

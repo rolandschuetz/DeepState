@@ -328,4 +328,5 @@ export const systemStateSchema = z
 
 export type ExplainabilityItem = z.infer<typeof explainabilityItemSchema>;
 export type PrivacyExclusionEntry = z.infer<typeof privacyExclusionEntrySchema>;
+export type DurableRuleReviewItem = z.infer<typeof durableRuleReviewItemSchema>;
 export type SystemState = z.infer<typeof systemStateSchema>;

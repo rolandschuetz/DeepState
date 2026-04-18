@@ -1,10 +1,9 @@
 import { randomUUID } from "node:crypto";
 
 import {
-  coachingExchangeSchema,
+  eveningDebriefExchangeSchema,
   morningPlanExchangeSchema,
   type Command,
-  type CoachingExchange,
   type MorningPlanExchange,
   type SystemState,
 } from "@ineedabossagent/shared-contracts";
@@ -17,6 +16,14 @@ import {
   TaskRepo,
 } from "../repos/sqlite-repositories.js";
 import { buildStartupSystemState } from "../bootstrap/startup-state.js";
+
+import {
+  CoachingExchangeParseError,
+  parseCoachingExchange,
+} from "./coaching-exchange-parse.js";
+import { importEveningDebriefExchange } from "./evening-flow.js";
+
+export { CoachingExchangeParseError, parseCoachingExchange } from "./coaching-exchange-parse.js";
 
 export type MorningFlowTriggerReason =
   | "first_notebook_open_after_4am"
@@ -107,54 +114,6 @@ export const generateMorningPrompt = (contextPacketText: string): string =>
     "Use this planning context:",
     contextPacketText,
   ].join("\n\n");
-
-const looksLikeTranscript = (rawText: string): boolean => {
-  const trimmed = rawText.trim();
-  if (!trimmed.startsWith("{")) {
-    return true;
-  }
-
-  return /```|^\s*[A-Z][A-Za-z ]+:\s/m.test(trimmed);
-};
-
-export class CoachingExchangeParseError extends Error {
-  readonly issues: string[];
-
-  constructor(message: string, issues: string[] = []) {
-    super(message);
-    this.name = "CoachingExchangeParseError";
-    this.issues = issues;
-  }
-}
-
-export const parseCoachingExchange = (rawText: string): CoachingExchange => {
-  if (looksLikeTranscript(rawText)) {
-    throw new CoachingExchangeParseError(
-      "Import payload must be strict JSON only, not a transcript-like exchange.",
-    );
-  }
-
-  let parsedJson: unknown;
-
-  try {
-    parsedJson = JSON.parse(rawText);
-  } catch (error) {
-    throw new CoachingExchangeParseError("Import payload contains malformed JSON.", [
-      error instanceof Error ? error.message : "Malformed JSON.",
-    ]);
-  }
-
-  const parsed = coachingExchangeSchema.safeParse(parsedJson);
-
-  if (!parsed.success) {
-    throw new CoachingExchangeParseError(
-      "Import payload failed schema validation.",
-      parsed.error.issues.map((issue) => `${issue.path.join(".") || "root"}: ${issue.message}`),
-    );
-  }
-
-  return parsed.data;
-};
 
 export const parseMorningPlanExchange = (rawText: string): MorningPlanExchange => {
   const parsed = parseCoachingExchange(rawText);
@@ -345,7 +304,12 @@ export const handleMorningFlowCommand = ({
     });
   }
 
-  throw new CoachingExchangeParseError(
-    "Evening debrief imports are not implemented yet.",
-  );
+  return importEveningDebriefExchange({
+    commandId: command.command_id,
+    database,
+    exchange: eveningDebriefExchangeSchema.parse(exchange),
+    importedAt,
+    source: command.payload.source,
+    ...(runtimeSessionId === undefined ? {} : { runtimeSessionId }),
+  });
 };

@@ -94,15 +94,15 @@ By architecting the software with a strict boundary—**the headless TypeScript 
 - [ ] Infer milestone-completion candidates from artifact/time evidence and surface them as confirm/dismiss actions only when confidence is strong enough.
 
 **Phase 6: Evening Flow & Reviewable Learning**
-- [ ] Implement `EveningDebriefPacketBuilder` stringing together plans, episodes, drift blocks, pauses, and overrides.
-- [ ] Include progress signals, estimate-vs-actual effort, unresolved ambiguities, and suggested learning candidates in the debrief packet.
+- [x] Implement `EveningDebriefPacketBuilder` stringing together plans, episodes, drift blocks, pauses, and overrides.
+- [x] Include progress signals, estimate-vs-actual effort, unresolved ambiguities, and suggested learning candidates in the debrief packet.
 - [ ] Reuse `ExplainabilityGenerator` to automatically append 2-3 concrete evidence bullets to every task episode within the export packet to supply the LLM with hard facts.
-- [ ] Implement `EveningPromptGenerator` instructing ChatGPT to spit back **strict JSON only**.
-- [ ] Branch `CoachingExchangeParser` for `exchange_type === "evening_debrief"`.
+- [x] Implement `EveningPromptGenerator` instructing ChatGPT to spit back **strict JSON only**.
+- [x] Branch `CoachingExchangeParser` for `exchange_type === "evening_debrief"`.
 - [ ] Parse clarified task boundaries, corrected ambiguity labels, candidate durable memories, tomorrow suggestions, and milestone relevance from valid evening imports.
-- [ ] Parse imported structured debriefs in SQLite `daily_memory_notes`.
-- [ ] Implement a review queue for candidate durable rule updates. (Rules must be user-confirmed to pass to `durable_rules`).
-- [ ] Convert accepted evening imports into `DailyMemoryNote`, `RuleProposal`, and reviewable durable-memory candidates without auto-promoting speculative text into truth.
+- [x] Parse imported structured debriefs in SQLite `daily_memory_notes`.
+- [x] Implement a review queue for candidate durable rule updates. (Rules must be user-confirmed to pass to `durable_rules`).
+- [x] Convert accepted evening imports into `DailyMemoryNote`, `RuleProposal`, and reviewable durable-memory candidates without auto-promoting speculative text into truth.
 
 **Phase 7: Ambiguity Resolution & Praise**
 - [ ] Implement stable ambiguity detection so clarification is required only after prolonged sustained uncertainty.
