@@ -66,7 +66,7 @@ describe("observationAppMigrations", () => {
     ]);
   });
 
-  it("creates classifications without the explainability column before the follow-up migration", () => {
+  it("creates classifications with the explainability JSON column", () => {
     const database = createDatabase();
 
     runStartupMigrations(database, appMigrations);
@@ -85,6 +85,7 @@ describe("observationAppMigrations", () => {
       "matched_goal_id",
       "matched_task_id",
       "last_good_context",
+      "explainability",
     ]);
   });
 

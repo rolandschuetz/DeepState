@@ -351,6 +351,17 @@ export const observationAppMigrations: SqliteMigration[] = [
     },
     version: 350,
   },
+  {
+    name: "add explainability column to classifications",
+    up: (database) => {
+      database.exec(`
+        ALTER TABLE classifications
+        ADD COLUMN explainability TEXT NOT NULL DEFAULT '[]'
+          CHECK (json_valid(explainability));
+      `);
+    },
+    version: 360,
+  },
 ];
 
 export const appMigrations: SqliteMigration[] = [
