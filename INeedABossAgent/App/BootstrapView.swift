@@ -18,6 +18,8 @@ struct BootstrapView: View {
       Text("Bridge: \(bridgeClient.configuration.baseURL.absoluteString)")
         .font(.caption)
         .foregroundStyle(.tertiary)
+
+      DiagnosticsView(systemHealth: appStateStore.dashboardState.systemHealth)
     }
     .padding(16)
     .frame(width: 320)
