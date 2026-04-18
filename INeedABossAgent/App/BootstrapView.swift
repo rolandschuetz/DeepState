@@ -2,6 +2,7 @@ import SwiftUI
 
 struct BootstrapView: View {
   @ObservedObject var bridgeClient: BridgeClient
+  @ObservedObject var appStateStore: AppStateStore
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
@@ -15,8 +16,14 @@ struct BootstrapView: View {
         .font(.caption)
         .foregroundStyle(.tertiary)
 
-      if let mode = bridgeClient.latestState?.mode {
+      if let mode = appStateStore.menuBarState.mode {
         Text("Latest mode: \(mode.rawValue)")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+
+      if let primaryLabel = appStateStore.menuBarState.viewModel?.primaryLabel {
+        Text("Focus: \(primaryLabel)")
           .font(.caption)
           .foregroundStyle(.secondary)
       }
@@ -42,5 +49,8 @@ struct BootstrapView: View {
 }
 
 #Preview {
-  BootstrapView(bridgeClient: BridgeClient())
+  BootstrapView(
+    bridgeClient: BridgeClient(),
+    appStateStore: AppStateStore()
+  )
 }
