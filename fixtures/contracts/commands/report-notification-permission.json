@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0.0",
+  "command_id": "40c69955-71bd-4a45-a608-a6f8d8ce9686",
+  "sent_at": "2026-04-18T09:06:00Z",
+  "kind": "report_notification_permission",
+  "payload": {
+    "os_permission": "granted"
+  }
+}

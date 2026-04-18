@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0.0",
+  "command_id": "31af6d8b-65ea-48e0-ae22-d4b05e265544",
+  "sent_at": "2026-04-18T09:01:00Z",
+  "kind": "resume",
+  "payload": {
+    "reason": "user_resume"
+  }
+}

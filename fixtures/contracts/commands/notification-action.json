@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0.0",
+  "command_id": "cb8d609e-c4dc-4cfd-ac4f-67dc1212c84d",
+  "sent_at": "2026-04-18T09:05:00Z",
+  "kind": "notification_action",
+  "payload": {
+    "intervention_id": "intervention_1",
+    "action_id": "action_1"
+  }
+}

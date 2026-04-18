@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "exchange_type": "evening_debrief",
+  "local_date": "2026-04-18",
+  "overall_day_summary": "Good forward motion with one afternoon drift block.",
+  "task_outcomes": [
+    {
+      "task_title": "Finish checkout redesign",
+      "did_progress_occur": "partial",
+      "what_counted_as_real_progress": "Completed the empty and error states.",
+      "what_was_support_work": "Reviewed implementation constraints with engineering.",
+      "what_was_misclassified_or_ambiguous": null
+    }
+  ],
+  "new_support_patterns_to_remember": [
+    "Stripe docs research counts as support work."
+  ],
+  "patterns_to_not_remember": [],
+  "corrections_for_task_boundaries": null,
+  "carry_forward_to_tomorrow": "Finalize mobile variants.",
+  "coaching_note_for_tomorrow": "Start with the highest-friction state."
+}

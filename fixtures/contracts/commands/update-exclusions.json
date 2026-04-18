@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "command_id": "787c4699-a3d7-4b15-9245-749668115d84",
+  "sent_at": "2026-04-18T09:02:00Z",
+  "kind": "update_exclusions",
+  "payload": {
+    "operations": [
+      {
+        "op": "upsert",
+        "entry": {
+          "exclusion_id": null,
+          "label": "Banking",
+          "match_type": "domain",
+          "pattern": "bank.example.com",
+          "enabled": true
+        }
+      },
+      {
+        "op": "remove",
+        "exclusion_id": "privacy_1"
+      }
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0.0",
+  "command_id": "c7942526-57a3-4ccb-a4da-2480b496759c",
+  "sent_at": "2026-04-18T09:00:00Z",
+  "kind": "pause",
+  "payload": {
+    "reason": "user_pause",
+    "duration_seconds": 600,
+    "note": "Taking a break"
+  }
+}

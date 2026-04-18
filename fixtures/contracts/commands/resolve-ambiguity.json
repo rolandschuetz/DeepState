@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0.0",
+  "command_id": "15c23639-23fe-4196-8fd9-138ff171564c",
+  "sent_at": "2026-04-18T09:03:00Z",
+  "kind": "resolve_ambiguity",
+  "payload": {
+    "clarification_id": "clarification_1",
+    "answer_id": "answer_1",
+    "remember_choice": "remember_as_task",
+    "user_note": null
+  }
+}

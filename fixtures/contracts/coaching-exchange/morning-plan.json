@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0.0",
+  "exchange_type": "morning_plan",
+  "local_date": "2026-04-18",
+  "total_intended_work_seconds": 14400,
+  "notes_for_tracker": "Protect the first deep-work block.",
+  "tasks": [
+    {
+      "title": "Finish checkout redesign",
+      "success_definition": "Ready for implementation handoff.",
+      "total_remaining_effort_seconds": 7200,
+      "intended_work_seconds_today": 7200,
+      "progress_kind": "milestone_based",
+      "allowed_support_work": ["Design QA"],
+      "likely_detours_that_still_count": ["Stakeholder review"]
+    },
+    {
+      "title": "Review billing copy",
+      "success_definition": "Copy approved for release.",
+      "total_remaining_effort_seconds": 1800,
+      "intended_work_seconds_today": 1800,
+      "progress_kind": "artifact_based",
+      "allowed_support_work": ["Legal review"],
+      "likely_detours_that_still_count": []
+    }
+  ]
+}

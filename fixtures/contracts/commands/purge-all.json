@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0.0",
+  "command_id": "98f78315-56d4-4bb6-8b1d-40190f48d7b4",
+  "sent_at": "2026-04-18T09:07:00Z",
+  "kind": "purge_all",
+  "payload": {
+    "confirm_phrase": "DELETE ALL COACHING DATA"
+  }
+}

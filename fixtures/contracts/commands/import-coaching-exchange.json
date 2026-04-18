@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0.0",
+  "command_id": "9c9caef2-3f9a-4e00-ab1c-c4d6fbc4b2ae",
+  "sent_at": "2026-04-18T09:04:00Z",
+  "kind": "import_coaching_exchange",
+  "payload": {
+    "source": "manual_paste",
+    "raw_text": "{\"schema_version\":\"1.0.0\",\"exchange_type\":\"morning_plan\",\"local_date\":\"2026-04-18\",\"total_intended_work_seconds\":14400,\"notes_for_tracker\":\"Protect the first deep-work block.\",\"tasks\":[{\"title\":\"Finish checkout redesign\",\"success_definition\":\"Ready for implementation handoff.\",\"total_remaining_effort_seconds\":7200,\"intended_work_seconds_today\":7200,\"progress_kind\":\"milestone_based\",\"allowed_support_work\":[\"Design QA\"],\"likely_detours_that_still_count\":[\"Stakeholder review\"]}]}"
+  }
+}
