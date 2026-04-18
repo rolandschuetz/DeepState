@@ -23,6 +23,17 @@ export type {
 } from "./screenpipe/client.js";
 
 export {
+  createScreenpipeSearchPoller,
+} from "./screenpipe/search-poller.js";
+
+export type {
+  ScreenpipeSearchCursor,
+  ScreenpipeSearchPoller,
+  ScreenpipeSearchPollOptions,
+  ScreenpipeSearchPollResult,
+} from "./screenpipe/search-poller.js";
+
+export {
   isFeatureFlagEnabled,
   loadRuntimeConfig,
 } from "./config/runtime-config.js";
