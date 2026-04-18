@@ -6,6 +6,9 @@ export {
   DEFAULT_PRIVACY_EXCLUSIONS,
   seedDefaultPrivacyExclusions,
 } from "./privacy/default-privacy-exclusions.js";
+export {
+  createPrivacyFilter,
+} from "./privacy/privacy-filter.js";
 
 export {
   createBridgeServer,
@@ -42,6 +45,11 @@ export type {
 export type {
   NormalizedScreenpipeEvidence,
 } from "./screenpipe/evidence-normalizer.js";
+export type {
+  PrivacyFilter,
+  PrivacyFilterAudit,
+  PrivacyFilterResult,
+} from "./privacy/privacy-filter.js";
 
 export {
   isFeatureFlagEnabled,
