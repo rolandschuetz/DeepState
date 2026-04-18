@@ -1,6 +1,9 @@
 export {
   buildStartupSystemState,
 } from "./bootstrap/startup-state.js";
+export {
+  createContextAggregator,
+} from "./context/context-aggregator.js";
 
 export {
   DEFAULT_PRIVACY_EXCLUSIONS,
@@ -44,6 +47,11 @@ export type {
   ScreenpipeSearchPollOptions,
   ScreenpipeSearchPollResult,
 } from "./screenpipe/search-poller.js";
+export type {
+  AggregatedContextWindow,
+  ContextAggregator,
+  ContextWindowSummary,
+} from "./context/context-aggregator.js";
 
 export type {
   NormalizedScreenpipeEvidence,
