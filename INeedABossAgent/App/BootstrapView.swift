@@ -20,7 +20,13 @@ struct BootstrapView: View {
         .foregroundStyle(.tertiary)
 
       MorningFlowView(
-        morningExchange: appStateStore.promptImportState.morningExchange
+        morningExchange: appStateStore.promptImportState.morningExchange,
+        onImport: { payload in
+          do {
+            _ = try await bridgeClient.dispatchCommand(payload)
+          } catch {
+          }
+        }
       )
 
       DiagnosticsView(

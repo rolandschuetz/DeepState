@@ -32,11 +32,21 @@ enum MorningFlowPresenter {
   static func copyPrompt(_ content: MorningFlowContent, clipboard: ClipboardWriting) {
     clipboard.write(content.promptText)
   }
+
+  static func makeImportPayload(from draftText: String) -> ImportCoachingExchangeCommandPayload {
+    ImportCoachingExchangeCommandPayload(
+      source: .manualPaste,
+      rawText: draftText.pasteSanitize()
+    )
+  }
 }
 
 struct MorningFlowView: View {
   let morningExchange: MorningExchangeViewModel?
   var clipboard: ClipboardWriting = SystemClipboardWriter()
+  var onImport: @Sendable (ImportCoachingExchangeCommandPayload) async -> Void = { _ in }
+
+  @State private var responseText = ""
 
   var body: some View {
     if let content = MorningFlowPresenter.content(from: morningExchange) {
@@ -64,6 +74,26 @@ struct MorningFlowView: View {
             .textSelection(.enabled)
         }
         .frame(maxHeight: 160)
+
+        Text("ChatGPT Response")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+
+        TextEditor(text: $responseText)
+          .font(.caption.monospaced())
+          .frame(minHeight: 140)
+          .overlay {
+            RoundedRectangle(cornerRadius: 8)
+              .strokeBorder(.quaternary)
+          }
+
+        Button("Import Response") {
+          let payload = MorningFlowPresenter.makeImportPayload(from: responseText)
+          Task {
+            await onImport(payload)
+          }
+        }
+        .font(.caption)
       }
     }
   }

@@ -34,6 +34,29 @@ final class MorningFlowViewTests: XCTestCase {
 
     XCTAssertEqual(clipboard.values, ["Return strict JSON only."])
   }
+
+  func testBuildsManualPasteImportPayloadFromSanitizedDraft() {
+    let payload = MorningFlowPresenter.makeImportPayload(
+      from: """
+        Sure, use this.
+        ```json
+        {
+          “schema_version”: “1.0.0”
+        }
+        ```
+        """
+    )
+
+    XCTAssertEqual(payload.source, .manualPaste)
+    XCTAssertEqual(
+      payload.rawText,
+      """
+      {
+        "schema_version": "1.0.0"
+      }
+      """
+    )
+  }
 }
 
 private final class MockClipboardWriter: ClipboardWriting {
