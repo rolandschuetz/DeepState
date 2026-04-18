@@ -20,6 +20,9 @@
 		1E6FC4A1B8D14AC7A3A51010 /* PasteSanitizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E6FC4A1B8D14AC7A3A51011 /* PasteSanitizer.swift */; };
 		1E6FC4A1B8D14AC7A3A51012 /* PasteSanitizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E6FC4A1B8D14AC7A3A51011 /* PasteSanitizer.swift */; };
 		1E6FC4A1B8D14AC7A3A51013 /* PasteSanitizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E6FC4A1B8D14AC7A3A51014 /* PasteSanitizerTests.swift */; };
+		1E6FC4A1B8D14AC7A3A51015 /* MorningFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E6FC4A1B8D14AC7A3A51016 /* MorningFlowView.swift */; };
+		1E6FC4A1B8D14AC7A3A51017 /* MorningFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E6FC4A1B8D14AC7A3A51016 /* MorningFlowView.swift */; };
+		1E6FC4A1B8D14AC7A3A51018 /* MorningFlowViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E6FC4A1B8D14AC7A3A51019 /* MorningFlowViewTests.swift */; };
 		285C9737580E352F860F9DFC /* SystemState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8330A7510089CBC13E28D3D /* SystemState.swift */; };
 		29A5526998269E6CB49C916E /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 57BEB135E1BE7F24E9645694 /* Cocoa.framework */; };
 		2B8BED953941CB7267541460 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 57BEB135E1BE7F24E9645694 /* Cocoa.framework */; };
@@ -53,6 +56,8 @@
 		1E6FC4A1B8D14AC7A3A5100E /* DiagnosticsViewTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DiagnosticsViewTests.swift; sourceTree = "<group>"; };
 		1E6FC4A1B8D14AC7A3A51011 /* PasteSanitizer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PasteSanitizer.swift; sourceTree = "<group>"; };
 		1E6FC4A1B8D14AC7A3A51014 /* PasteSanitizerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PasteSanitizerTests.swift; sourceTree = "<group>"; };
+		1E6FC4A1B8D14AC7A3A51016 /* MorningFlowView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MorningFlowView.swift; sourceTree = "<group>"; };
+		1E6FC4A1B8D14AC7A3A51019 /* MorningFlowViewTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MorningFlowViewTests.swift; sourceTree = "<group>"; };
 		3B94C57A8AC3E37348D958E3 /* BootstrapConfigurationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BootstrapConfigurationTests.swift; sourceTree = "<group>"; };
 		465B2AA333038EBB96306A87 /* BootstrapView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BootstrapView.swift; sourceTree = "<group>"; };
 		554F840A73FB0BFAE29F6E58 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -92,6 +97,7 @@
 			children = (
 				1E6FC4A1B8D14AC7A3A51002 /* AppStateStoreTests.swift */,
 				1E6FC4A1B8D14AC7A3A5100E /* DiagnosticsViewTests.swift */,
+				1E6FC4A1B8D14AC7A3A51019 /* MorningFlowViewTests.swift */,
 				1E6FC4A1B8D14AC7A3A51009 /* ModeRouterTests.swift */,
 				1E6FC4A1B8D14AC7A3A51014 /* PasteSanitizerTests.swift */,
 				3B94C57A8AC3E37348D958E3 /* BootstrapConfigurationTests.swift */,
@@ -145,6 +151,7 @@
 				9C75556CA6FF566442F445E1 /* AppDelegate.swift */,
 				465B2AA333038EBB96306A87 /* BootstrapView.swift */,
 				1E6FC4A1B8D14AC7A3A5100B /* DiagnosticsView.swift */,
+				1E6FC4A1B8D14AC7A3A51016 /* MorningFlowView.swift */,
 				1E6FC4A1B8D14AC7A3A51006 /* ModeRouterView.swift */,
 				1E6FC4A1B8D14AC7A3A51011 /* PasteSanitizer.swift */,
 				554F840A73FB0BFAE29F6E58 /* Info.plist */,
@@ -270,6 +277,7 @@
 				9EB292D4DF76E808159C1D14 /* AppDelegate.swift in Sources */,
 				78CFBDF1E74C697CB5536B0D /* BootstrapView.swift in Sources */,
 				1E6FC4A1B8D14AC7A3A5100A /* DiagnosticsView.swift in Sources */,
+				1E6FC4A1B8D14AC7A3A51015 /* MorningFlowView.swift in Sources */,
 				1E6FC4A1B8D14AC7A3A51005 /* ModeRouterView.swift in Sources */,
 				1E6FC4A1B8D14AC7A3A51010 /* PasteSanitizer.swift in Sources */,
 				C486E824E595E5829BDDB051 /* SystemState.swift in Sources */,
@@ -284,7 +292,9 @@
 				1E6FC4A1B8D14AC7A3A51004 /* AppStateStore.swift in Sources */,
 				1E6FC4A1B8D14AC7A3A5100D /* DiagnosticsViewTests.swift in Sources */,
 				1E6FC4A1B8D14AC7A3A5100C /* DiagnosticsView.swift in Sources */,
+				1E6FC4A1B8D14AC7A3A51018 /* MorningFlowViewTests.swift in Sources */,
 				1E6FC4A1B8D14AC7A3A51008 /* ModeRouterTests.swift in Sources */,
+				1E6FC4A1B8D14AC7A3A51017 /* MorningFlowView.swift in Sources */,
 				1E6FC4A1B8D14AC7A3A51013 /* PasteSanitizerTests.swift in Sources */,
 				1E6FC4A1B8D14AC7A3A51007 /* ModeRouterView.swift in Sources */,
 				1E6FC4A1B8D14AC7A3A51012 /* PasteSanitizer.swift in Sources */,

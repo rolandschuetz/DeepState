@@ -19,6 +19,10 @@ struct BootstrapView: View {
         .font(.caption)
         .foregroundStyle(.tertiary)
 
+      MorningFlowView(
+        morningExchange: appStateStore.promptImportState.morningExchange
+      )
+
       DiagnosticsView(
         systemHealth: appStateStore.dashboardState.systemHealth,
         connectionState: bridgeClient.connectionState,
