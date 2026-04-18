@@ -27,12 +27,21 @@ export {
   normalizeScreenpipeRecordTimestamps,
 } from "./screenpipe/search-poller.js";
 
+export {
+  normalizeScreenpipeRecordToEvidence,
+  normalizeScreenpipeRecordsToEvidence,
+} from "./screenpipe/evidence-normalizer.js";
+
 export type {
   ScreenpipeSearchCursor,
   ScreenpipeSearchPoller,
   ScreenpipeSearchPollOptions,
   ScreenpipeSearchPollResult,
 } from "./screenpipe/search-poller.js";
+
+export type {
+  NormalizedScreenpipeEvidence,
+} from "./screenpipe/evidence-normalizer.js";
 
 export {
   isFeatureFlagEnabled,
