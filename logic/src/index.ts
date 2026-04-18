@@ -8,6 +8,11 @@ export {
 } from "./config/runtime-config.js";
 
 export {
+  appMigrations,
+  baseAppMigrations,
+} from "./db/app-migrations.js";
+
+export {
   DEFAULT_SQLITE_BUSY_TIMEOUT_MS,
   openDatabase,
 } from "./db/database.js";
