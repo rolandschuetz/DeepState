@@ -4,6 +4,10 @@ export {
 export {
   createContextAggregator,
 } from "./context/context-aggregator.js";
+export {
+  applyClassificationHysteresis,
+  classifyContextWindow,
+} from "./classifier/focus-classifier.js";
 
 export {
   DEFAULT_PRIVACY_EXCLUSIONS,
@@ -48,6 +52,13 @@ export type {
   ScreenpipeSearchPollOptions,
   ScreenpipeSearchPollResult,
 } from "./screenpipe/search-poller.js";
+export type {
+  ClassificationTickResult,
+  ClassifierTaskProfile,
+  ClassificationExplainability,
+  DeterministicClassification,
+  HysteresisMemory,
+} from "./classifier/focus-classifier.js";
 export type {
   AggregatedContextWindow,
   ContextAggregator,
@@ -148,11 +159,24 @@ export {
 } from "./diagnostics/logger.js";
 
 export {
+  buildMorningContextPacket,
+  CoachingExchangeParseError,
+  createMorningFlowState,
+  generateMorningPrompt,
+  handleMorningFlowCommand,
+  importMorningPlanExchange,
+  parseCoachingExchange,
+  parseMorningPlanExchange,
+  shouldTriggerMorningFlow,
+} from "./planning/morning-flow.js";
+
+export {
   ClassificationRepo,
   CorrectionRepo,
   DailyPlanRepo,
   FocusBlockRepo,
   GoalContractRepo,
+  ImportAuditLogRepo,
   InterventionRepo,
   MemoryRepo,
   ObservationRepo,
@@ -173,6 +197,7 @@ export type {
   EpisodeRecord,
   FocusBlockRecord,
   GoalContractRecord,
+  ImportAuditLogRecord,
   InterventionActionRecord,
   InterventionOutcomeRecord,
   InterventionRecord,
@@ -189,6 +214,17 @@ export {
   isRuntimeEvaluationEnabled,
   runWhenModeIsRunning,
 } from "./runtime/mode-gate.js";
+export {
+  applyPauseToSystemState,
+  decideInterventionGate,
+  decideLocalAiFallback,
+  retrieveRelevantDurableRules,
+  shouldSurfaceAmbiguityPrompt,
+} from "./runtime/runtime-guards.js";
+export type {
+  InterventionGateDecision,
+  LocalAiFallbackDecision,
+} from "./runtime/runtime-guards.js";
 
 export {
   createDefaultSystemState,

@@ -180,6 +180,18 @@ export type FocusBlockRecord = {
   title: string;
 };
 
+export type ImportAuditLogRecord = {
+  accepted: boolean;
+  auditId: string;
+  exchangeType: "morning_plan" | "evening_debrief";
+  importedAt: string;
+  localDate: string;
+  note: string | null;
+  payload: unknown;
+  schemaVersion: string;
+  source: string;
+};
+
 export type ObservationRecord = {
   appIdentifier: string | null;
   observationId: string;
@@ -547,6 +559,47 @@ export class ObservationRepo {
   getById(id: string): ObservationRecord | null { return this.#repo.getById(id); }
   listAll(): ObservationRecord[] { return this.#repo.listAll(); }
   update(entity: ObservationRecord): boolean { return this.#repo.update(entity); }
+}
+
+export class ImportAuditLogRepo {
+  readonly #repo: CrudRepository<ImportAuditLogRecord, string>;
+
+  constructor(database: SqliteDatabase) {
+    this.#repo = createCrudRepository(database, {
+      fromRow: (row) => ({
+        accepted: toBoolean(requireSqliteValue(row.accepted, "accepted")),
+        auditId: row.audit_id as string,
+        exchangeType: row.exchange_type as "morning_plan" | "evening_debrief",
+        importedAt: row.imported_at as string,
+        localDate: row.local_date as string,
+        note: (row.note ?? null) as string | null,
+        payload: fromJsonText(requireSqliteValue(row.payload_json, "payload_json")),
+        schemaVersion: row.schema_version as string,
+        source: row.source as string,
+      }),
+      getId: (entity) => entity.auditId,
+      idColumn: "audit_id",
+      listOrderBy: "imported_at ASC, audit_id ASC",
+      table: "import_audit_log",
+      toRow: (entity) => ({
+        accepted: entity.accepted ? 1 : 0,
+        audit_id: entity.auditId,
+        exchange_type: entity.exchangeType,
+        imported_at: entity.importedAt,
+        local_date: entity.localDate,
+        note: entity.note,
+        payload_json: toJsonText(entity.payload),
+        schema_version: entity.schemaVersion,
+        source: entity.source,
+      }),
+    });
+  }
+
+  create(entity: ImportAuditLogRecord): ImportAuditLogRecord { return this.#repo.create(entity); }
+  delete(id: string): boolean { return this.#repo.delete(id); }
+  getById(id: string): ImportAuditLogRecord | null { return this.#repo.getById(id); }
+  listAll(): ImportAuditLogRecord[] { return this.#repo.listAll(); }
+  update(entity: ImportAuditLogRecord): boolean { return this.#repo.update(entity); }
 }
 
 export class EpisodeRepo {

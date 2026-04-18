@@ -102,6 +102,15 @@ export const buildStartupSystemState = ({
         mode: "running",
         summary_text: "Plan loaded. Runtime ready.",
       },
+      morning_exchange: {
+        status: "completed",
+        context_packet_text: null,
+        prompt_text: null,
+      },
+      evening_exchange: {
+        ...baseState.dashboard.evening_exchange,
+        status: "available",
+      },
       plan: {
         imported_at: latestPlan.importedAt,
         local_date: latestPlan.localDate,

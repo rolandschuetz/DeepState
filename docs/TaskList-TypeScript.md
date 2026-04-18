@@ -55,29 +55,29 @@ By architecting the software with a strict boundary—**the headless TypeScript 
 - [x] Handle adapter edge cases explicitly: partial Screenpipe results, missing frame context, overlapping duplicate polls, and slow queries that exceed the scheduler budget.
 
 **Phase 3: Morning Flow Export & Unified JSON Import**
-- [ ] Trigger the morning flow on first meaningful activity, first menu bar open of the day, manual "Start My Day", or manual plan reset.
-- [ ] Implement `MorningContextPacketBuilder` using yesterday carry-over context plus durable rules safe to surface.
-- [ ] Include unresolved ambiguities, yesterday debrief outcomes, and manually declared meetings/open questions in the morning context packet when available.
-- [ ] Implement `MorningPromptGenerator` as a copy-paste prompt instructing ChatGPT explicitly to return **strict schema-versioned JSON only** (no markdown text outside the JSON).
-- [ ] Implement `CoachingExchangeParser` handling the unified import payload. Branch to `exchange_type === "morning_plan"`.
-- [ ] Add explicit validation errors for malformed JSON, missing fields, or unsupported schema versions.
-- [ ] Reject transcript-like freeform payloads, validate 1-3 tasks, validate intended hours and success definitions, and validate the structure of allowed support work/detours.
-- [ ] Implement import service to save validated plan data into `daily_plans`, immediately transition `mode` to `running`, and push the SSE state block.
-- [ ] Persist `goal_contracts`, `task_contracts`, optional `focus_blocks`, initialize progress baselines, and append an `import_audit_log` record for every accepted import.
-- [ ] Support safe midday re-import / plan reset flows without corrupting the active day's observation history.
+- [x] Trigger the morning flow on first notebook open after 4am of the day, plus manual "Start My Day" / manual plan reset paths.
+- [x] Implement `MorningContextPacketBuilder` using yesterday carry-over context plus durable rules safe to surface.
+- [x] Include unresolved ambiguities, yesterday debrief outcomes, and manually declared meetings/open questions in the morning context packet when available.
+- [x] Implement `MorningPromptGenerator` as a copy-paste prompt instructing ChatGPT explicitly to return **strict schema-versioned JSON only** (no markdown text outside the JSON).
+- [x] Implement `CoachingExchangeParser` handling the unified import payload. Branch to `exchange_type === "morning_plan"`.
+- [x] Add explicit validation errors for malformed JSON, missing fields, or unsupported schema versions.
+- [x] Reject transcript-like freeform payloads, validate 1-3 tasks, validate intended hours and success definitions, and validate the structure of allowed support work/detours.
+- [x] Implement import service to save validated plan data into `daily_plans`, immediately transition `mode` to `running`, and push the SSE state block.
+- [x] Persist `goal_contracts`, `task_contracts`, optional `focus_blocks`, initialize progress baselines, and append an `import_audit_log` record for every accepted import.
+- [x] Support safe midday re-import / plan reset flows without corrupting the active day's observation history.
 
 **Phase 4: Classification, State Machine & Recovery Anchor**
-- [ ] Implement deterministic rules evaluating evidence against today's declared tasks.
-- [ ] Add weighted evidence scoring on top of deterministic matches using recency, novelty penalties, contradiction penalties, and confidence floor/ceiling rules.
-- [ ] Back all evaluation checks into an `{ code, detail, weight }` format stored to the `explainability` JSON array on the classification output.
-- [ ] Implement hysteresis rules to require sustained evidence across multiple ticks before triggering a state change.
-- [ ] Implement retrieval of recent answers from SQLite `durable_rules` before triggering LLM-assisted ambiguity requests.
-- [ ] Gate local AI fallback strictly: only run it when rules, scoring, and retrieval remain ambiguous; pass compact evidence only; require strict structured output; never let model output directly trigger notifications.
-- [ ] Implement the **Recovery Anchor**: cache the `last_good_context` string (e.g., active window title/URL) locally whenever the state is high-confidence `aligned`.
-- [ ] Implement `pause` command handling to halt classifier evaluations and emit `mode = "paused"` into the stream immediately.
-- [ ] Suppress ambiguity prompts during pause, lock/sleep wake churn, and active cooldown windows so the classifier does not teach at noisy boundaries.
-- [ ] Add a final intervention gate that checks pause state, cooldown state, notification permission, and whether a better intervention is already pending before surfacing any prompt.
-- [ ] Add replay tests verifying required state transitions (e.g. aligned -> soft drift -> recovery; aligned -> hard drift).
+- [x] Implement deterministic rules evaluating evidence against today's declared tasks.
+- [x] Add weighted evidence scoring on top of deterministic matches using recency, novelty penalties, contradiction penalties, and confidence floor/ceiling rules.
+- [x] Back all evaluation checks into an `{ code, detail, weight }` format stored to the `explainability` JSON array on the classification output.
+- [x] Implement hysteresis rules to require sustained evidence across multiple ticks before triggering a state change.
+- [x] Implement retrieval of recent answers from SQLite `durable_rules` before triggering LLM-assisted ambiguity requests.
+- [x] Gate local AI fallback strictly: only run it when rules, scoring, and retrieval remain ambiguous; pass compact evidence only; require strict structured output; never let model output directly trigger notifications.
+- [x] Implement the **Recovery Anchor**: cache the `last_good_context` string (e.g., active window title/URL) locally whenever the state is high-confidence `aligned`.
+- [x] Implement `pause` command handling to halt classifier evaluations and emit `mode = "paused"` into the stream immediately.
+- [x] Suppress ambiguity prompts during pause, lock/sleep wake churn, and active cooldown windows so the classifier does not teach at noisy boundaries.
+- [x] Add a final intervention gate that checks pause state, cooldown state, notification permission, and whether a better intervention is already pending before surfacing any prompt.
+- [x] Add replay tests verifying required state transitions (e.g. aligned -> soft drift -> recovery; aligned -> hard drift).
 
 **Phase 5: Progress, Explainability & Message Discipline**
 - [ ] Implement `EpisodeBuilder` to roll `ContextWindow`s up into 3-5 minute block episodes.
