@@ -68,7 +68,8 @@ final class BridgeClientTests: XCTestCase {
     ])
     let client = BridgeClient(
       configuration: makeConfiguration(),
-      transport: streamer
+      transport: streamer,
+      automaticallyReconnect: false
     )
 
     client.connect()
@@ -91,7 +92,8 @@ final class BridgeClientTests: XCTestCase {
   func testConnectSurfacesTransportFailures() async throws {
     let client = BridgeClient(
       configuration: makeConfiguration(),
-      transport: MockEventStreamTransport(error: TestError.transportFailed)
+      transport: MockEventStreamTransport(error: TestError.transportFailed),
+      automaticallyReconnect: false
     )
 
     client.connect()
@@ -108,6 +110,141 @@ final class BridgeClientTests: XCTestCase {
       .failed(TestError.transportFailed.localizedDescription)
     )
     XCTAssertEqual(client.lastErrorDescription, TestError.transportFailed.localizedDescription)
+  }
+
+  func testConnectIgnoresStaleSnapshotsForSameRuntimeSession() async throws {
+    let initialStateJSON = try fixtureString(named: "system-state.running.json")
+    let staleStateJSON = try mutateSystemStateJSON(initialStateJSON) { state in
+      state["stream_sequence"] = 147
+      state["mode"] = "paused"
+
+      var menuBar = try XCTUnwrap(state["menu_bar"] as? [String: Any])
+      menuBar["primary_label"] = "Stale value should be ignored"
+      state["menu_bar"] = menuBar
+    }
+
+    let client = BridgeClient(
+      configuration: makeConfiguration(),
+      transport: MockEventStreamTransport(events: [
+        .init(event: BridgeClient.systemStateEventName, data: initialStateJSON),
+        .init(event: BridgeClient.systemStateEventName, data: staleStateJSON),
+      ]),
+      automaticallyReconnect: false
+    )
+
+    client.connect()
+    await waitForCondition {
+      client.connectionState == .disconnected
+    }
+
+    XCTAssertEqual(client.latestState?.streamSequence, 148)
+    XCTAssertEqual(client.latestState?.mode, .running)
+    XCTAssertEqual(client.latestState?.menuBar.primaryLabel, "Checkout redesign")
+  }
+
+  func testConnectReplacesStateWhenRuntimeSessionChanges() async throws {
+    let initialStateJSON = try fixtureString(named: "system-state.running.json")
+    let replacementStateJSON = try mutateSystemStateJSON(initialStateJSON) { state in
+      state["runtime_session_id"] = "runtime-session-2"
+      state["stream_sequence"] = 1
+      state["mode"] = "paused"
+
+      var menuBar = try XCTUnwrap(state["menu_bar"] as? [String: Any])
+      menuBar["primary_label"] = "Recovered after restart"
+      state["menu_bar"] = menuBar
+    }
+
+    let client = BridgeClient(
+      configuration: makeConfiguration(),
+      transport: MockEventStreamTransport(events: [
+        .init(event: BridgeClient.systemStateEventName, data: initialStateJSON),
+        .init(event: BridgeClient.systemStateEventName, data: replacementStateJSON),
+      ]),
+      automaticallyReconnect: false
+    )
+
+    client.connect()
+    await waitForCondition {
+      client.connectionState == .disconnected
+    }
+
+    XCTAssertEqual(client.latestState?.runtimeSessionId, "runtime-session-2")
+    XCTAssertEqual(client.latestState?.streamSequence, 1)
+    XCTAssertEqual(client.latestState?.mode, .paused)
+    XCTAssertEqual(client.latestState?.menuBar.primaryLabel, "Recovered after restart")
+  }
+
+  func testConnectAutoReconnectsAfterDroppedStream() async throws {
+    let initialStateJSON = try fixtureString(named: "system-state.running.json")
+    let reconnectedStateJSON = try mutateSystemStateJSON(initialStateJSON) { state in
+      state["runtime_session_id"] = "runtime-session-2"
+      state["stream_sequence"] = 1
+
+      var menuBar = try XCTUnwrap(state["menu_bar"] as? [String: Any])
+      menuBar["primary_label"] = "Fresh snapshot after reconnect"
+      state["menu_bar"] = menuBar
+    }
+
+    let transport = ScriptedEventStreamTransport(scripts: [
+      .events([
+        .init(event: BridgeClient.systemStateEventName, data: initialStateJSON)
+      ]),
+      .events(
+        [.init(event: BridgeClient.systemStateEventName, data: reconnectedStateJSON)],
+        keepOpen: true
+      ),
+    ])
+    let client = BridgeClient(
+      configuration: makeConfiguration(),
+      transport: transport,
+      automaticallyReconnect: true,
+      reconnectDelayNanoseconds: 10_000_000
+    )
+
+    client.connect()
+    await waitForCondition(timeoutNanoseconds: 1_000_000_000) {
+      transport.requests.count == 2
+        && client.latestState?.runtimeSessionId == "runtime-session-2"
+        && client.connectionState == .connected
+    }
+
+    XCTAssertEqual(transport.requests.count, 2)
+    XCTAssertEqual(client.latestState?.menuBar.primaryLabel, "Fresh snapshot after reconnect")
+    client.disconnect()
+  }
+
+  func testConnectRetriesAfterTransportFailure() async throws {
+    let recoveredStateJSON = try mutateSystemStateJSON(
+      try fixtureString(named: "system-state.running.json")
+    ) { state in
+      state["runtime_session_id"] = "runtime-session-3"
+      state["stream_sequence"] = 1
+    }
+
+    let transport = ScriptedEventStreamTransport(scripts: [
+      .error(TestError.transportFailed),
+      .events(
+        [.init(event: BridgeClient.systemStateEventName, data: recoveredStateJSON)],
+        keepOpen: true
+      ),
+    ])
+    let client = BridgeClient(
+      configuration: makeConfiguration(),
+      transport: transport,
+      automaticallyReconnect: true,
+      reconnectDelayNanoseconds: 10_000_000
+    )
+
+    client.connect()
+    await waitForCondition(timeoutNanoseconds: 1_000_000_000) {
+      transport.requests.count == 2
+        && client.latestState?.runtimeSessionId == "runtime-session-3"
+        && client.connectionState == .connected
+    }
+
+    XCTAssertEqual(client.lastErrorDescription, nil)
+    XCTAssertEqual(client.latestState?.runtimeSessionId, "runtime-session-3")
+    client.disconnect()
   }
 
   func testDispatchCommandPostsPauseFixturePayload() async throws {
@@ -214,6 +351,21 @@ final class BridgeClientTests: XCTestCase {
     return try XCTUnwrap(String(data: normalized, encoding: .utf8))
   }
 
+  private func mutateSystemStateJSON(
+    _ jsonString: String,
+    mutate: (inout [String: Any]) throws -> Void
+  ) throws -> String {
+    let jsonData = Data(jsonString.utf8)
+    var object = try XCTUnwrap(
+      try JSONSerialization.jsonObject(with: jsonData) as? [String: Any]
+    )
+
+    try mutate(&object)
+
+    let mutatedData = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+    return try XCTUnwrap(String(data: mutatedData, encoding: .utf8))
+  }
+
   private var repositoryRootURL: URL {
     URL(fileURLWithPath: #filePath)
       .deletingLastPathComponent()
@@ -268,6 +420,60 @@ private final class MockEventStreamTransport: EventStreamTransport {
       }
 
       continuation.finish()
+    }
+  }
+}
+
+private final class ScriptedEventStreamTransport: EventStreamTransport {
+  enum Script {
+    case error(Error)
+    case events([ServerSentEvent], keepOpen: Bool = false)
+  }
+
+  private let scripts: [Script]
+  private var nextScriptIndex = 0
+
+  private(set) var requests: [URLRequest] = []
+
+  init(scripts: [Script]) {
+    self.scripts = scripts
+  }
+
+  func streamEvents(for request: URLRequest) -> AsyncThrowingStream<ServerSentEvent, Error> {
+    requests.append(request)
+
+    let scriptIndex = nextScriptIndex
+    nextScriptIndex += 1
+    let script = scriptIndex < scripts.count ? scripts[scriptIndex] : .events([], keepOpen: true)
+
+    return AsyncThrowingStream { continuation in
+      switch script {
+      case .error(let error):
+        continuation.finish(throwing: error)
+      case .events(let events, let keepOpen):
+        let task = Task {
+          for event in events {
+            continuation.yield(event)
+          }
+
+          if keepOpen {
+            do {
+              while Task.isCancelled == false {
+                try await Task.sleep(nanoseconds: 50_000_000)
+              }
+            } catch {
+              continuation.finish()
+              return
+            }
+          }
+
+          continuation.finish()
+        }
+
+        continuation.onTermination = { _ in
+          task.cancel()
+        }
+      }
     }
   }
 }

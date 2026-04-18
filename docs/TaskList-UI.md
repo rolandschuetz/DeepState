@@ -21,7 +21,7 @@ This task list reflects the tightened V1 MVP architecture:
 - [x] Define Swift models mapping exactly to the shared JSON `SystemState` schema block, and write test decoders against the TS-generated unit fixtures.
 - [x] Implement `BridgeClient` managing a persistent `URLSession` SSE connection (`GET /stream`) mapping directly to app environment variables.
 - [x] Implement `BridgeClient` single POST dispatcher (`POST /command`) for all outbound data actions.
-- [ ] Request a fresh current snapshot on app open and auto-reconnect after logic-process restarts without applying stale state blindly.
+- [x] Request a fresh current snapshot on app open and auto-reconnect after logic-process restarts without applying stale state blindly.
 - [ ] Introduce a thin app-side state store (`MenuBarState`, `DashboardState`, `PromptImportState`, `PendingNotificationState`, `ClarificationPanelState`, `SettingsState`) driven only by bridge payloads.
 - [ ] Map the global TS `Mode` to the top-level SwiftUI router wrapper checking for `booting`, `no_plan`, `running`, `paused`, `degraded_screenpipe`, and `logic_error`.
 - [ ] Build a small diagnostic UI referencing the `SystemHealthViewModel` detailing Screenpipe/Database connection integrity.

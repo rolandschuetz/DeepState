@@ -453,6 +453,11 @@ enum BridgeClock {
 
 @MainActor
 final class BridgeClient: ObservableObject {
+  private struct SnapshotCursor: Equatable {
+    let runtimeSessionId: String
+    let streamSequence: Int
+  }
+
   enum ConnectionState: Equatable {
     case idle
     case connecting
@@ -471,16 +476,24 @@ final class BridgeClient: ObservableObject {
 
   private let transport: EventStreamTransport
   private let commandTransport: CommandRequestTransport
+  private let automaticallyReconnect: Bool
+  private let reconnectDelayNanoseconds: UInt64
+  private var latestSnapshotCursor: SnapshotCursor?
   private var streamTask: Task<Void, Never>?
+  private var wantsConnection = false
 
   init(
     configuration: BridgeConfiguration = (try? .fromProcessEnvironment()) ?? .fallback,
     transport: EventStreamTransport = URLSessionEventStreamTransport(),
-    commandTransport: CommandRequestTransport = URLSessionCommandRequestTransport()
+    commandTransport: CommandRequestTransport = URLSessionCommandRequestTransport(),
+    automaticallyReconnect: Bool = true,
+    reconnectDelayNanoseconds: UInt64 = 1_000_000_000
   ) {
     self.configuration = configuration
     self.transport = transport
     self.commandTransport = commandTransport
+    self.automaticallyReconnect = automaticallyReconnect
+    self.reconnectDelayNanoseconds = reconnectDelayNanoseconds
   }
 
   deinit {
@@ -488,18 +501,14 @@ final class BridgeClient: ObservableObject {
   }
 
   func connect() {
+    wantsConnection = true
+
     guard streamTask == nil else {
       return
     }
 
     connectionState = .connecting
     lastErrorDescription = nil
-
-    var request = URLRequest(url: configuration.streamURL)
-    request.cachePolicy = .reloadIgnoringLocalCacheData
-    request.timeoutInterval = configuration.requestTimeoutSeconds
-    request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
-    request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
 
     streamTask = Task { [weak self] in
       guard let self else {
@@ -510,25 +519,48 @@ final class BridgeClient: ObservableObject {
         self.streamTask = nil
       }
 
-      do {
-        for try await event in transport.streamEvents(for: request) {
-          try handle(event: event)
+      while wantsConnection, Task.isCancelled == false {
+        do {
+          connectionState = .connecting
+          let request = makeStreamRequest()
+
+          for try await event in transport.streamEvents(for: request) {
+            try handle(event: event)
+          }
+
+          guard wantsConnection, Task.isCancelled == false else {
+            break
+          }
+
+          connectionState = .disconnected
+        } catch is CancellationError {
+          connectionState = .idle
+          return
+        } catch {
+          let description = error.localizedDescription
+          lastErrorDescription = description
+          connectionState = .failed(description)
         }
 
-        if Task.isCancelled == false {
-          connectionState = .disconnected
+        guard wantsConnection, Task.isCancelled == false, automaticallyReconnect else {
+          break
         }
-      } catch is CancellationError {
-        connectionState = .idle
-      } catch {
-        let description = error.localizedDescription
-        lastErrorDescription = description
-        connectionState = .failed(description)
+
+        do {
+          try await Task.sleep(nanoseconds: reconnectDelayNanoseconds)
+        } catch is CancellationError {
+          connectionState = .idle
+          return
+        } catch {
+          connectionState = .failed(error.localizedDescription)
+          return
+        }
       }
     }
   }
 
   func disconnect() {
+    wantsConnection = false
     streamTask?.cancel()
     streamTask = nil
     connectionState = .idle
@@ -575,8 +607,36 @@ final class BridgeClient: ObservableObject {
     }
 
     let state = try BridgeJSONCoding.decoder.decode(SystemState.self, from: data)
-    latestState = state
+    if shouldAccept(state) {
+      latestSnapshotCursor = SnapshotCursor(
+        runtimeSessionId: state.runtimeSessionId,
+        streamSequence: state.streamSequence
+      )
+      latestState = state
+    }
+
     lastErrorDescription = nil
     connectionState = .connected
+  }
+
+  private func makeStreamRequest() -> URLRequest {
+    var request = URLRequest(url: configuration.streamURL)
+    request.cachePolicy = .reloadIgnoringLocalCacheData
+    request.timeoutInterval = configuration.requestTimeoutSeconds
+    request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+    request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
+    return request
+  }
+
+  private func shouldAccept(_ state: SystemState) -> Bool {
+    guard let latestSnapshotCursor else {
+      return true
+    }
+
+    guard latestSnapshotCursor.runtimeSessionId == state.runtimeSessionId else {
+      return true
+    }
+
+    return state.streamSequence > latestSnapshotCursor.streamSequence
   }
 }
