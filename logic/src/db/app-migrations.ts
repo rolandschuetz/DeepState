@@ -187,7 +187,174 @@ export const planningAppMigrations: SqliteMigration[] = [
   },
 ];
 
+export const observationAppMigrations: SqliteMigration[] = [
+  {
+    name: "create observations table",
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE observations (
+          observation_id TEXT PRIMARY KEY,
+          observed_at TEXT NOT NULL,
+          source TEXT NOT NULL,
+          app_identifier TEXT,
+          window_title TEXT,
+          url TEXT,
+          screenpipe_ref_json TEXT NOT NULL,
+          payload_json TEXT NOT NULL
+        );
+
+        CREATE INDEX observations_observed_at_idx
+          ON observations (observed_at DESC);
+      `);
+    },
+    version: 300,
+  },
+  {
+    name: "create context_windows table",
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE context_windows (
+          context_window_id TEXT PRIMARY KEY,
+          started_at TEXT NOT NULL,
+          ended_at TEXT NOT NULL,
+          summary_json TEXT NOT NULL,
+          source_observation_ids_json TEXT NOT NULL,
+          previous_window_id TEXT,
+          next_window_id TEXT,
+          CHECK (ended_at >= started_at),
+          FOREIGN KEY (previous_window_id) REFERENCES context_windows (context_window_id) ON DELETE SET NULL,
+          FOREIGN KEY (next_window_id) REFERENCES context_windows (context_window_id) ON DELETE SET NULL
+        );
+
+        CREATE INDEX context_windows_started_at_idx
+          ON context_windows (started_at DESC);
+      `);
+    },
+    version: 310,
+  },
+  {
+    name: "create episodes table",
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE episodes (
+          episode_id TEXT PRIMARY KEY,
+          started_at TEXT NOT NULL,
+          ended_at TEXT NOT NULL,
+          runtime_state TEXT NOT NULL
+            CHECK (runtime_state IN ('aligned', 'uncertain', 'soft_drift', 'hard_drift', 'paused')),
+          matched_task_id TEXT,
+          is_support_work INTEGER NOT NULL DEFAULT 0 CHECK (is_support_work IN (0, 1)),
+          confidence_ratio REAL,
+          top_evidence_json TEXT NOT NULL,
+          context_window_ids_json TEXT NOT NULL,
+          CHECK (ended_at >= started_at),
+          FOREIGN KEY (matched_task_id) REFERENCES task_contracts (task_id) ON DELETE SET NULL
+        );
+
+        CREATE INDEX episodes_started_at_idx
+          ON episodes (started_at DESC);
+      `);
+    },
+    version: 320,
+  },
+  {
+    name: "create classifications table",
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE classifications (
+          classification_id TEXT PRIMARY KEY,
+          context_window_id TEXT NOT NULL,
+          classified_at TEXT NOT NULL,
+          runtime_state TEXT NOT NULL
+            CHECK (runtime_state IN ('aligned', 'uncertain', 'soft_drift', 'hard_drift', 'paused')),
+          is_support INTEGER NOT NULL DEFAULT 0 CHECK (is_support IN (0, 1)),
+          confidence_ratio REAL,
+          matched_goal_id TEXT,
+          matched_task_id TEXT,
+          last_good_context TEXT,
+          FOREIGN KEY (context_window_id) REFERENCES context_windows (context_window_id) ON DELETE CASCADE,
+          FOREIGN KEY (matched_goal_id) REFERENCES goal_contracts (goal_id) ON DELETE SET NULL,
+          FOREIGN KEY (matched_task_id) REFERENCES task_contracts (task_id) ON DELETE SET NULL
+        );
+
+        CREATE INDEX classifications_context_window_idx
+          ON classifications (context_window_id);
+        CREATE INDEX classifications_classified_at_idx
+          ON classifications (classified_at DESC);
+      `);
+    },
+    version: 330,
+  },
+  {
+    name: "create progress_estimates table",
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE progress_estimates (
+          progress_estimate_id TEXT PRIMARY KEY,
+          plan_id TEXT NOT NULL,
+          task_id TEXT,
+          estimated_at TEXT NOT NULL,
+          progress_ratio REAL,
+          confidence_ratio REAL,
+          aligned_seconds INTEGER NOT NULL DEFAULT 0 CHECK (aligned_seconds >= 0),
+          support_seconds INTEGER NOT NULL DEFAULT 0 CHECK (support_seconds >= 0),
+          drift_seconds INTEGER NOT NULL DEFAULT 0 CHECK (drift_seconds >= 0),
+          eta_remaining_seconds INTEGER
+            CHECK (eta_remaining_seconds IS NULL OR eta_remaining_seconds >= 0),
+          latest_status_text TEXT NOT NULL,
+          FOREIGN KEY (plan_id) REFERENCES daily_plans (plan_id) ON DELETE CASCADE,
+          FOREIGN KEY (task_id) REFERENCES task_contracts (task_id) ON DELETE SET NULL
+        );
+
+        CREATE INDEX progress_estimates_plan_task_idx
+          ON progress_estimates (plan_id, estimated_at DESC);
+      `);
+    },
+    version: 340,
+  },
+  {
+    name: "create interventions and intervention_outcomes tables",
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE interventions (
+          intervention_id TEXT PRIMARY KEY,
+          created_at TEXT NOT NULL,
+          kind TEXT NOT NULL,
+          presentation TEXT NOT NULL,
+          severity TEXT NOT NULL,
+          title TEXT NOT NULL,
+          body TEXT NOT NULL,
+          actions_json TEXT NOT NULL,
+          suppress_native_notification INTEGER NOT NULL CHECK (suppress_native_notification IN (0, 1)),
+          suppression_reason TEXT,
+          dedupe_key TEXT NOT NULL,
+          expires_at TEXT,
+          source_classification_id TEXT,
+          FOREIGN KEY (source_classification_id) REFERENCES classifications (classification_id) ON DELETE SET NULL
+        );
+
+        CREATE TABLE intervention_outcomes (
+          outcome_id TEXT PRIMARY KEY,
+          intervention_id TEXT NOT NULL,
+          action_id TEXT,
+          outcome_kind TEXT NOT NULL,
+          recorded_at TEXT NOT NULL,
+          note TEXT,
+          FOREIGN KEY (intervention_id) REFERENCES interventions (intervention_id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX interventions_created_at_idx
+          ON interventions (created_at DESC);
+        CREATE INDEX intervention_outcomes_intervention_idx
+          ON intervention_outcomes (intervention_id, recorded_at DESC);
+      `);
+    },
+    version: 350,
+  },
+];
+
 export const appMigrations: SqliteMigration[] = [
   ...baseAppMigrations,
   ...planningAppMigrations,
+  ...observationAppMigrations,
 ];

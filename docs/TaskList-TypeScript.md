@@ -29,7 +29,7 @@ By architecting the software with a strict boundary—**the headless TypeScript 
 - [x] Add migration guard rails: idempotent startup runner, migration lock/guard, rollback handling for failed migrations, and a smoke-test fixture database.
 - [x] Base migrations: `app_settings` (including a field for `observe_only_ticks_remaining`), `privacy_exclusions`, and `runtime_health_events`.
 - [x] Planning migrations: `daily_plans`, `goal_contracts`, `task_contracts`, `focus_blocks`, and `import_audit_log`.
-- [ ] Observation migrations: `observations`, `context_windows`, `episodes`, `classifications`, `progress_estimates`, `interventions`, and `intervention_outcomes`.
+- [x] Observation migrations: `observations`, `context_windows`, `episodes`, `classifications`, `progress_estimates`, `interventions`, and `intervention_outcomes`.
 - [ ] Add a `JSON` column to the `classifications` table named `explainability` to dynamically store arrays of `{ code, detail, weight }`.
 - [ ] Learning migrations (reduced for MVP): `daily_memory_notes` (Daily Memory layer), `durable_rules` (Long-term rules layer for user-confirmed patterns), `user_corrections`, `signal_weights`, and `rule_proposals`. *Drop vector retrieval indices for V1.* 
 - [ ] Implement `SettingsRepo`, `DailyPlanRepo`, `TaskRepo`, `FocusBlockRepo`, `ObservationRepo`, `EpisodeRepo`, `ClassificationRepo`, `ProgressRepo`, `InterventionRepo`, `CorrectionRepo`, `MemoryRepo`, `RuleProposalRepo`, and `PrivacyExclusionsRepo` with CRUD methods.
