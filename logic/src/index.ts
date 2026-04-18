@@ -3,6 +3,11 @@ export {
 } from "./bootstrap/startup-state.js";
 
 export {
+  DEFAULT_PRIVACY_EXCLUSIONS,
+  seedDefaultPrivacyExclusions,
+} from "./privacy/default-privacy-exclusions.js";
+
+export {
   createBridgeServer,
 } from "./server/bridge-server.js";
 

@@ -34,7 +34,7 @@ By architecting the software with a strict boundary—**the headless TypeScript 
 - [x] Learning migrations (reduced for MVP): `daily_memory_notes` (Daily Memory layer), `durable_rules` (Long-term rules layer for user-confirmed patterns), `user_corrections`, `signal_weights`, and `rule_proposals`. *Drop vector retrieval indices for V1.* 
 - [x] Implement `SettingsRepo`, `DailyPlanRepo`, `TaskRepo`, `FocusBlockRepo`, `ObservationRepo`, `EpisodeRepo`, `ClassificationRepo`, `ProgressRepo`, `InterventionRepo`, `CorrectionRepo`, `MemoryRepo`, `RuleProposalRepo`, and `PrivacyExclusionsRepo` with CRUD methods.
 - [x] Implement startup rule: if there is no imported daily plan to load, system top-level state enters `no_plan` mode; engines idle automatically.
-- [ ] Implement default privacy exclusions preset: upon first boot, automatically seed the `privacy_exclusions` table with standard regex patterns for password managers (1Password, Keychain) and common banking/checkout domains.
+- [x] Implement default privacy exclusions preset: upon first boot, automatically seed the `privacy_exclusions` table with standard regex patterns for password managers (1Password, Keychain) and common banking/checkout domains.
 - [ ] Keep transactions short, expose an explicit WAL checkpoint hook for maintenance, and implement bounded retry/backoff for transient `SQLITE_BUSY` cases.
 - [ ] Add compact retention rules: keep Screenpipe refs instead of duplicated media, prune stale intermediate windows, and let the user tune retention duration later through settings.
 - [ ] Implement local data export as JSON and/or SQLite backup, and ensure `purge_all` also clears reviewable rule proposals and other app-owned derived caches without mutating Screenpipe data.
