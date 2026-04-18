@@ -1,3 +1,4 @@
+# DeepState - Local-only self-surveillance
 
 # ScreenPipe Setup
 
