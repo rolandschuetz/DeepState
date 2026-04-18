@@ -167,6 +167,8 @@ enum MenuBarExtraPresenter {
 }
 
 struct MenuBarExtraView: View {
+  @Environment(\.openWindow) private var openWindow
+
   @ObservedObject var bridgeClient: BridgeClient
   @ObservedObject var appStateStore: AppStateStore
 
@@ -203,6 +205,11 @@ struct MenuBarExtraView: View {
             .foregroundStyle(.tertiary)
         }
       }
+
+      Button("Open Dashboard") {
+        openWindow(id: DashboardWindowRoute.id)
+      }
+      .font(.caption)
 
       HStack {
         Button("Pause Coaching") {

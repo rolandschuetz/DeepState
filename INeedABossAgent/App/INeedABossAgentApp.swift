@@ -25,5 +25,13 @@ struct INeedABossAgentApp: App {
       )
     }
     .menuBarExtraStyle(.window)
+
+    Window("Dashboard", id: DashboardWindowRoute.id) {
+      DashboardWindowView(
+        bridgeClient: bridgeClient,
+        appStateStore: appStateStore
+      )
+    }
+    .windowResizability(.contentMinSize)
   }
 }

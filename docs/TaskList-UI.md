@@ -47,13 +47,13 @@ This task list reflects the tightened V1 MVP architecture:
 - [x] Add "Pause Coaching" and explicit "Take a Break" actions routing unified actions cleanly back to TS.
 
 **Phase 3: Explainability Dashboard & Settings**
-- [ ] Build the main dashboard window to track active focus goals/hours remaining against progress percentages.
-- [ ] Add dashboard sections for unresolved ambiguities, pending milestone confirmations, recent events, and the last explainability log.
-- [ ] Build the "Why am I seeing this?" accordion section. Note: The UI must **blindly traverse and render** the incoming `{ code, detail, weight }` JSON explainability array passed via `SystemState`. No inferential context evaluation is handled in Swift natively.
-- [ ] Build Privacy exclusions UI text-fields showing the TS-seeded default domain strings. Dispatch UI updates to `update_exclusions` payloads automatically.
-- [ ] Add settings controls for reminder preferences, praise preferences, local data export, and diagnostics without duplicating logic decisions in Swift.
-- [ ] Form a deeply nested destructive "Delete All Coaching Data" UI flow wired natively to the TS `purge_all` command.
-- [ ] Wire `SMAppService` setup correctly for launch-at-login execution.
+- [x] Build the main dashboard window to track active focus goals/hours remaining against progress percentages.
+- [x] Add dashboard sections for unresolved ambiguities, pending milestone confirmations, recent events, and the last explainability log.
+- [x] Build the "Why am I seeing this?" accordion section. Note: The UI must **blindly traverse and render** the incoming `{ code, detail, weight }` JSON explainability array passed via `SystemState`. No inferential context evaluation is handled in Swift natively.
+- [x] Build Privacy exclusions UI text-fields showing the TS-seeded default domain strings. Dispatch UI updates to `update_exclusions` payloads automatically.
+- [x] Add settings controls for reminder preferences, praise preferences, local data export, and diagnostics without duplicating logic decisions in Swift.
+- [x] Form a deeply nested destructive "Delete All Coaching Data" UI flow wired natively to the TS `purge_all` command.
+- [x] Wire `SMAppService` setup correctly for launch-at-login execution.
 
 **Phase 4: Interventions & Clarification HUD**
 - [ ] Request `UNUserNotificationCenter` permissions. Map denial states gracefully to an overarching warning flag on the dashboard if permissions are withheld.
