@@ -190,6 +190,8 @@ const interventionActionSchema = z.object({
     "pause_10_minutes",
     "open_dashboard",
     "dismiss",
+    "confirm_milestone",
+    "dismiss_milestone",
   ]),
 });
 
@@ -202,6 +204,7 @@ const interventionViewModelSchema = z.object({
     "recovery_anchor",
     "risk_prompt",
     "clarification_notification",
+    "milestone_candidate",
   ]),
   presentation: z.enum(["dashboard_only", "local_notification", "both"]),
   severity: severitySchema,

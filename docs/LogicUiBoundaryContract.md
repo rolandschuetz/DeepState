@@ -401,7 +401,8 @@ type InterventionViewModel = {
     | "praise"
     | "recovery_anchor"
     | "risk_prompt"
-    | "clarification_notification";
+    | "clarification_notification"
+    | "milestone_candidate";
 
   presentation: "dashboard_only" | "local_notification" | "both";
   severity: Severity;
@@ -434,7 +435,9 @@ type InterventionAction = {
     | "intentional_detour"
     | "pause_10_minutes"
     | "open_dashboard"
-    | "dismiss";
+    | "dismiss"
+    | "confirm_milestone"
+    | "dismiss_milestone";
 };
 ```
 

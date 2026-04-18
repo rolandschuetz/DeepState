@@ -380,6 +380,34 @@ export const observationAppMigrations: SqliteMigration[] = [
     },
     version: 360,
   },
+  {
+    name: "add risk_level to progress_estimates",
+    up: (database) => {
+      database.exec(`
+        ALTER TABLE progress_estimates
+        ADD COLUMN risk_level TEXT
+          CHECK (risk_level IS NULL OR risk_level IN ('low', 'medium', 'high'));
+      `);
+    },
+    version: 370,
+  },
+  {
+    name: "seed observe-only grace ticks once",
+    up: (database) => {
+      database.exec(`
+        ALTER TABLE app_settings
+        ADD COLUMN observe_only_seed_version INTEGER NOT NULL DEFAULT 0;
+
+        UPDATE app_settings
+        SET
+          observe_only_ticks_remaining = 75,
+          observe_only_seed_version = 1
+        WHERE settings_id = 1
+          AND observe_only_seed_version = 0;
+      `);
+    },
+    version: 380,
+  },
 ];
 
 export const learningAppMigrations: SqliteMigration[] = [

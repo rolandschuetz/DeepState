@@ -1155,7 +1155,8 @@
                 "praise",
                 "recovery_anchor",
                 "risk_prompt",
-                "clarification_notification"
+                "clarification_notification",
+                "milestone_candidate"
               ]
             },
             "presentation": {
@@ -1202,7 +1203,9 @@
                       "intentional_detour",
                       "pause_10_minutes",
                       "open_dashboard",
-                      "dismiss"
+                      "dismiss",
+                      "confirm_milestone",
+                      "dismiss_milestone"
                     ]
                   }
                 },

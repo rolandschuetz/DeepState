@@ -1,6 +1,7 @@
 import type {
   ExplainabilityItem,
   ProgressKind,
+  RiskLevel,
   RuntimeState,
 } from "@ineedabossagent/shared-contracts";
 
@@ -132,6 +133,7 @@ const createCrudRepository = <TEntity, TId extends number | string>(
 export type AppSettingsRecord = {
   createdAt: string;
   observationRetentionDays: number;
+  observeOnlySeedVersion: number;
   observeOnlyTicksRemaining: number;
   settingsId: number;
   staleContextWindowRetentionHours: number;
@@ -238,6 +240,7 @@ export type ProgressEstimateRecord = {
   planId: string;
   progressEstimateId: string;
   progressRatio: number | null;
+  riskLevel: RiskLevel | null;
   supportSeconds: number;
   taskId: string | null;
 };
@@ -335,6 +338,7 @@ export class SettingsRepo {
       fromRow: (row) => ({
         createdAt: row.created_at as string,
         observationRetentionDays: row.observation_retention_days as number,
+        observeOnlySeedVersion: (row.observe_only_seed_version ?? 0) as number,
         observeOnlyTicksRemaining: row.observe_only_ticks_remaining as number,
         settingsId: row.settings_id as number,
         staleContextWindowRetentionHours: row.stale_context_window_retention_hours as number,
@@ -347,6 +351,7 @@ export class SettingsRepo {
       toRow: (entity) => ({
         created_at: entity.createdAt,
         observation_retention_days: entity.observationRetentionDays,
+        observe_only_seed_version: entity.observeOnlySeedVersion,
         observe_only_ticks_remaining: entity.observeOnlyTicksRemaining,
         settings_id: entity.settingsId,
         stale_context_window_retention_hours: entity.staleContextWindowRetentionHours,
@@ -709,6 +714,7 @@ export class ProgressRepo {
         planId: row.plan_id as string,
         progressEstimateId: row.progress_estimate_id as string,
         progressRatio: row.progress_ratio as number | null,
+        riskLevel: (row.risk_level ?? null) as RiskLevel | null,
         supportSeconds: row.support_seconds as number,
         taskId: row.task_id as string | null,
       }),
@@ -726,6 +732,7 @@ export class ProgressRepo {
         plan_id: entity.planId,
         progress_estimate_id: entity.progressEstimateId,
         progress_ratio: entity.progressRatio,
+        risk_level: entity.riskLevel,
         support_seconds: entity.supportSeconds,
         task_id: entity.taskId,
       }),

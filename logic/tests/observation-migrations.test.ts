@@ -87,6 +87,12 @@ describe("observationAppMigrations", () => {
       "last_good_context",
       "explainability",
     ]);
+
+    const progressColumns = database
+      .prepare("PRAGMA table_info(progress_estimates)")
+      .all() as Array<{ name: string }>;
+
+    expect(progressColumns.map((column) => column.name)).toContain("risk_level");
   });
 
   it("creates the observation-layer indexes", () => {

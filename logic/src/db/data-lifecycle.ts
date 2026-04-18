@@ -99,10 +99,11 @@ export const purgeAllAppData = (
       INSERT INTO app_settings (
         settings_id,
         observe_only_ticks_remaining,
+        observe_only_seed_version,
         created_at,
         updated_at
       )
-      VALUES (1, 0, ${sqlStringLiteral(purgedAt)}, ${sqlStringLiteral(purgedAt)})
+      VALUES (1, 0, 0, ${sqlStringLiteral(purgedAt)}, ${sqlStringLiteral(purgedAt)})
     `);
   });
 

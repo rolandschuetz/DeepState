@@ -5,6 +5,13 @@ export {
   createContextAggregator,
 } from "./context/context-aggregator.js";
 export {
+  buildEpisodesFromClassifiedWindows,
+} from "./context/episode-builder.js";
+export type {
+  ClassifiedWindowInput,
+  EpisodeBuilderOptions,
+} from "./context/episode-builder.js";
+export {
   applyClassificationHysteresis,
   classifyContextWindow,
 } from "./classifier/focus-classifier.js";
@@ -215,6 +222,15 @@ export {
   runWhenModeIsRunning,
 } from "./runtime/mode-gate.js";
 export {
+  createInitialPhase5Memory,
+  runPhase5SlowTick,
+} from "./runtime/phase5-orchestrator.js";
+export type {
+  Phase5OrchestratorMemory,
+  Phase5SlowTickResult,
+  RunPhase5SlowTickParams,
+} from "./runtime/phase5-orchestrator.js";
+export {
   applyPauseToSystemState,
   decideInterventionGate,
   decideLocalAiFallback,
@@ -225,6 +241,41 @@ export type {
   InterventionGateDecision,
   LocalAiFallbackDecision,
 } from "./runtime/runtime-guards.js";
+
+export {
+  buildExplainabilityForDashboard,
+} from "./explainability/explainability-generator.js";
+
+export {
+  computeProgressEstimatesForPlan,
+  inferMilestoneCandidate,
+} from "./progress/progress-estimator.js";
+export type {
+  MilestoneCandidateEstimate,
+  ProgressEstimateDraft,
+} from "./progress/progress-estimator.js";
+export {
+  buildLatestStatusText,
+  evaluateRiskSignals,
+  riskLevelFromSignals,
+  rollupEpisodesByTask,
+} from "./progress/risk-detector.js";
+export type {
+  RiskSignals,
+  TaskEpisodeRollup,
+} from "./progress/risk-detector.js";
+
+export { messages } from "./interventions/messages.js";
+export {
+  decideIntervention,
+  HARD_DRIFT_COOLDOWN_MS,
+  MILESTONE_CONFIDENCE_THRESHOLD,
+} from "./interventions/intervention-engine.js";
+export type {
+  InterventionDecision,
+  InterventionDecisionInput,
+  MilestoneCandidateInput,
+} from "./interventions/intervention-engine.js";
 
 export {
   createDefaultSystemState,

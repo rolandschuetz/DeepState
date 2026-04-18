@@ -88,7 +88,8 @@ describe("sqlite repositories", () => {
     const focusBlockRepo = new FocusBlockRepo(database);
 
     const settings = settingsRepo.getById(1);
-    expect(settings?.observeOnlyTicksRemaining).toBe(0);
+    expect(settings?.observeOnlyTicksRemaining).toBe(75);
+    expect(settings?.observeOnlySeedVersion).toBe(1);
     expect(settings?.observationRetentionDays).toBe(14);
     expect(settings?.staleContextWindowRetentionHours).toBe(12);
     expect(
@@ -96,7 +97,8 @@ describe("sqlite repositories", () => {
         ...(settings ?? {
           createdAt: "2026-04-18T00:00:00Z",
           observationRetentionDays: 14,
-          observeOnlyTicksRemaining: 0,
+          observeOnlySeedVersion: 1,
+          observeOnlyTicksRemaining: 75,
           settingsId: 1,
           staleContextWindowRetentionHours: 12,
           updatedAt: "2026-04-18T00:00:00Z",
@@ -265,6 +267,7 @@ describe("sqlite repositories", () => {
       planId: "plan_1",
       progressEstimateId: "progress_1",
       progressRatio: 0.4,
+      riskLevel: "low",
       supportSeconds: 300,
       taskId: "task_1",
     });
@@ -302,6 +305,7 @@ describe("sqlite repositories", () => {
     expect(episodeRepo.getById("episode_1")?.topEvidence).toEqual(["Figma active"]);
     expect(classificationRepo.getById("classification_1")?.explainability).toHaveLength(1);
     expect(progressRepo.getById("progress_1")?.alignedSeconds).toBe(1800);
+    expect(progressRepo.getById("progress_1")?.riskLevel).toBe("low");
     expect(interventionRepo.getById("intervention_1")?.actions[0]?.label).toBe("Return");
     expect(interventionRepo.getOutcomeById("outcome_1")?.outcomeKind).toBe("dismissed");
     expect(interventionRepo.deleteOutcome("outcome_1")).toBe(true);
