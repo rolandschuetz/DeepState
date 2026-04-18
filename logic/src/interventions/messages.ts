@@ -24,4 +24,11 @@ export const messages = {
     body: (detail: string): string => `Reset. ${detail}`,
     title: "Check. Day at risk",
   },
+  praise: {
+    body: (minutes: number, taskTitle: string | null): string =>
+      taskTitle === null
+        ? `Locked. You held ${minutes} minutes of focused, on-plan work.`
+        : `Locked. You held ${minutes} minutes on "${taskTitle}".`,
+    title: "Locked. Strong focus sustained",
+  },
 } as const;

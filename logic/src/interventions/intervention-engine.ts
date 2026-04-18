@@ -5,6 +5,7 @@ import type { Mode, RuntimeState } from "@ineedabossagent/shared-contracts";
 import type { InterventionRecord } from "../repos/sqlite-repositories.js";
 
 import { messages } from "./messages.js";
+import { PRAISE_MIN_ALIGNED_MS } from "./praise-engine.js";
 
 export const HARD_DRIFT_COOLDOWN_MS = 15 * 60 * 1_000;
 export const MILESTONE_CONFIDENCE_THRESHOLD = 0.85;
@@ -14,6 +15,12 @@ export type MilestoneCandidateInput = {
   hint: string;
   taskId: string;
   taskTitle: string;
+};
+
+export type PraiseDecisionInput = {
+  alignedStreakMs: number;
+  currentFocusBlockKey: string;
+  lastPraiseEmittedForFocusBlockKey: string | null;
 };
 
 export type InterventionDecisionInput = {
@@ -27,6 +34,7 @@ export type InterventionDecisionInput = {
   nowMs: number;
   observeOnlyTicksRemaining: number;
   paused: boolean;
+  praiseInput: PraiseDecisionInput | null;
   previousRuntimeState: RuntimeState;
   riskPromptDetail: string | null;
   sourceClassificationId: string | null;
@@ -165,6 +173,58 @@ export const decideIntervention = (
         suppressNativeNotification: nativeDeliverySuppressed,
         suppressionReason: nativeSuppressionReason,
         title: messages.recoveryAnchor.title,
+      },
+      lastHardDriftNotificationAtMs: lastHardDrift,
+    };
+  }
+
+  // 2b) Praise — sustained aligned work (max once per focus block; gated like other notifications).
+  if (
+    input.classificationRuntimeState === "aligned" &&
+    input.praiseInput !== null &&
+    input.praiseInput.alignedStreakMs >= PRAISE_MIN_ALIGNED_MS &&
+    input.praiseInput.lastPraiseEmittedForFocusBlockKey !==
+      input.praiseInput.currentFocusBlockKey
+  ) {
+    const praise = input.praiseInput;
+    const minutesRounded = Math.max(
+      1,
+      Math.round(praise.alignedStreakMs / 60_000),
+    );
+    const { reason, suppress } = suppressionForHardDrift({
+      cooldownActive: false,
+      mode: input.mode,
+      notificationPermissionGranted: input.notificationPermissionGranted,
+      observeOnlyTicksRemaining: input.observeOnlyTicksRemaining,
+      paused: input.paused,
+    });
+
+    return {
+      intervention: {
+        actions: [
+          {
+            actionId: randomUUID(),
+            label: "Open dashboard",
+            semanticAction: "open_dashboard",
+          },
+          {
+            actionId: randomUUID(),
+            label: "Dismiss",
+            semanticAction: "dismiss",
+          },
+        ],
+        body: messages.praise.body(minutesRounded, input.taskTitle),
+        createdAt: input.nowIso,
+        dedupeKey: `praise:${praise.currentFocusBlockKey}`,
+        expiresAt: null,
+        interventionId: randomUUID(),
+        kind: "praise",
+        presentation: "both",
+        severity: "info",
+        sourceClassificationId: input.sourceClassificationId,
+        suppressNativeNotification: suppress,
+        suppressionReason: reason,
+        title: messages.praise.title,
       },
       lastHardDriftNotificationAtMs: lastHardDrift,
     };

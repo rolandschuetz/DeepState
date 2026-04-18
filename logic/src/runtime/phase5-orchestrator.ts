@@ -1,17 +1,42 @@
 import type { Mode, RuntimeState } from "@ineedabossagent/shared-contracts";
 
 import {
+  createInitialAmbiguityPolicyMemory,
+  fingerprintForContextWindow,
+  markHudShownForFingerprint,
+  tickAmbiguityPolicy,
+  type AmbiguityPolicyMemory,
+} from "../ambiguity/ambiguity-policy.js";
+import {
+  buildClarificationHud,
+  evidenceSnapshotFromWindow,
+} from "../ambiguity/build-clarification-hud.js";
+import type { ClarificationHudModel } from "../ambiguity/build-clarification-hud.js";
+import {
   buildEpisodesFromClassifiedWindows,
   type ClassifiedWindowInput,
 } from "../context/episode-builder.js";
+import type { AggregatedContextWindow } from "../context/context-aggregator.js";
+import {
+  alignedStreakDurationMs,
+  createInitialPraisePolicyMemory,
+  nextPraisePolicyMemory,
+  pickPraiseFocusBlockKey,
+  type PraisePolicyMemory,
+} from "../interventions/praise-engine.js";
 import {
   computeProgressEstimatesForPlan,
   inferMilestoneCandidate,
 } from "../progress/progress-estimator.js";
-import type { FocusBlockRecord, TaskContractRecord } from "../repos/sqlite-repositories.js";
+import type {
+  FocusBlockRecord,
+  PendingClarificationRecord,
+  TaskContractRecord,
+} from "../repos/sqlite-repositories.js";
 import {
   EpisodeRepo,
   InterventionRepo,
+  PendingClarificationRepo,
   ProgressRepo,
   SettingsRepo,
 } from "../repos/sqlite-repositories.js";
@@ -20,14 +45,19 @@ import { decideIntervention } from "../interventions/intervention-engine.js";
 import type { InterventionDecision } from "../interventions/intervention-engine.js";
 
 export type Phase5OrchestratorMemory = {
+  ambiguityMemory?: AmbiguityPolicyMemory;
   lastHardDriftNotificationAtMs: number | null;
+  praiseMemory?: PraisePolicyMemory;
   previousRuntimeState: RuntimeState;
 };
 
 export const createInitialPhase5Memory = (
   initialPreviousState: RuntimeState = "uncertain",
+  nowMs: number = Date.now(),
 ): Phase5OrchestratorMemory => ({
+  ambiguityMemory: createInitialAmbiguityPolicyMemory(nowMs),
   lastHardDriftNotificationAtMs: null,
+  praiseMemory: createInitialPraisePolicyMemory(),
   previousRuntimeState: initialPreviousState,
 });
 
@@ -52,12 +82,23 @@ export type RunPhase5SlowTickParams = {
   taskForMilestoneInference: TaskContractRecord | null;
   taskTitle: string | null;
   tasks: TaskContractRecord[];
+  /** Ambiguity HUD + sustained praise (Phase 7). Omitted pieces default to safe in-memory state. */
+  phase7?: {
+    ambiguityCooldownActive: boolean;
+    currentWindow: AggregatedContextWindow | null;
+    isLockedBoundary: boolean;
+    relatedEpisodeId: string | null;
+    slowTickDurationMs: number;
+    tasksForHud: { taskId: string; title: string }[];
+  };
 };
 
 export type Phase5SlowTickResult = {
+  clarificationHud: ClarificationHudModel | null;
   decision: InterventionDecision;
   episodeIds: string[];
   memory: Phase5OrchestratorMemory;
+  pendingClarification: PendingClarificationRecord | null;
   progressEstimateIds: string[];
 };
 
@@ -84,10 +125,12 @@ export const runPhase5SlowTick = ({
   taskForMilestoneInference,
   taskTitle,
   tasks,
+  phase7,
 }: RunPhase5SlowTickParams): Phase5SlowTickResult => {
   const episodeRepo = new EpisodeRepo(database);
   const progressRepo = new ProgressRepo(database);
   const interventionRepo = new InterventionRepo(database);
+  const pendingClarificationRepo = new PendingClarificationRepo(database);
   const settingsRepo = new SettingsRepo(database);
 
   const existingEpisodes = episodeRepo.listAll();
@@ -151,6 +194,23 @@ export const runPhase5SlowTick = ({
           task: taskForMilestoneInference,
         });
 
+  let ambiguityMemory =
+    memory.ambiguityMemory ?? createInitialAmbiguityPolicyMemory(nowMs);
+  let praiseMemory = memory.praiseMemory ?? createInitialPraisePolicyMemory();
+
+  praiseMemory = nextPraisePolicyMemory({
+    classificationRuntimeState,
+    nowMs,
+    previous: praiseMemory,
+  });
+
+  const alignedStreakMs = alignedStreakDurationMs({ nowMs, praiseMemory });
+  const focusBlockKey = pickPraiseFocusBlockKey({
+    focusBlocks,
+    nowMs,
+    planId,
+  });
+
   const decision = decideIntervention({
     classificationRuntimeState,
     lastGoodContext,
@@ -162,6 +222,12 @@ export const runPhase5SlowTick = ({
     nowMs,
     observeOnlyTicksRemaining,
     paused,
+    praiseInput: {
+      alignedStreakMs,
+      currentFocusBlockKey: focusBlockKey,
+      lastPraiseEmittedForFocusBlockKey:
+        praiseMemory.lastPraiseEmittedForFocusBlockKey,
+    },
     previousRuntimeState: memory.previousRuntimeState,
     riskPromptDetail:
       highRiskDraft === undefined
@@ -171,19 +237,82 @@ export const runPhase5SlowTick = ({
     taskTitle,
   });
 
+  if (decision.intervention?.kind === "praise") {
+    praiseMemory = {
+      ...praiseMemory,
+      lastPraiseEmittedForFocusBlockKey: focusBlockKey,
+    };
+  }
+
   if (decision.intervention !== null) {
     interventionRepo.create(decision.intervention);
   }
 
+  let clarificationHud: ClarificationHudModel | null = null;
+  let pendingClarification: PendingClarificationRecord | null = null;
+
+  if (phase7 !== undefined && phase7.currentWindow !== null) {
+    const ambiguityTick = tickAmbiguityPolicy({
+      input: {
+        ambiguityCooldownActive: phase7.ambiguityCooldownActive,
+        classificationRuntimeState,
+        isLockedBoundary: phase7.isLockedBoundary,
+        mode,
+        nowMs,
+        paused,
+        tickDurationMs: phase7.slowTickDurationMs,
+        window: phase7.currentWindow,
+      },
+      memory: ambiguityMemory,
+    });
+
+    ambiguityMemory = ambiguityTick.memory;
+
+    const fingerprint = fingerprintForContextWindow(phase7.currentWindow);
+    const pendingExisting = pendingClarificationRepo.listPendingForPlan(planId);
+
+    if (
+      ambiguityTick.eligibleForHud &&
+      pendingExisting.length === 0 &&
+      phase7.tasksForHud.length > 0
+    ) {
+      const hud = buildClarificationHud({
+        nowIso,
+        relatedEpisodeId: phase7.relatedEpisodeId,
+        subtitle: null,
+        tasks: phase7.tasksForHud,
+      });
+      const evidence = evidenceSnapshotFromWindow(phase7.currentWindow);
+
+      pendingClarification = {
+        clarificationId: hud.clarification_id,
+        createdAt: nowIso,
+        evidenceJson: JSON.stringify(evidence),
+        expiresAt: null,
+        hudJson: JSON.stringify(hud),
+        planId,
+        status: "pending",
+      };
+
+      pendingClarificationRepo.create(pendingClarification);
+      clarificationHud = hud;
+      ambiguityMemory = markHudShownForFingerprint(ambiguityMemory, fingerprint);
+    }
+  }
+
   const nextMemory: Phase5OrchestratorMemory = {
+    ambiguityMemory,
     lastHardDriftNotificationAtMs: decision.lastHardDriftNotificationAtMs,
+    praiseMemory,
     previousRuntimeState: classificationRuntimeState,
   };
 
   return {
+    clarificationHud,
     decision,
     episodeIds: newEpisodes.map((episode) => episode.episodeId),
     memory: nextMemory,
+    pendingClarification,
     progressEstimateIds,
   };
 };

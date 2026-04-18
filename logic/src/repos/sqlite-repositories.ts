@@ -319,6 +319,16 @@ export type RuleProposalRecord = {
   status: "accepted" | "dismissed" | "pending";
 };
 
+export type PendingClarificationRecord = {
+  clarificationId: string;
+  createdAt: string;
+  evidenceJson: string;
+  expiresAt: string | null;
+  hudJson: string;
+  planId: string;
+  status: "dismissed" | "pending" | "resolved";
+};
+
 export type PrivacyExclusionRecord = {
   createdAt: string;
   enabled: boolean;
@@ -987,6 +997,123 @@ export class RuleProposalRepo {
   getById(id: string): RuleProposalRecord | null { return this.#repo.getById(id); }
   listAll(): RuleProposalRecord[] { return this.#repo.listAll(); }
   update(entity: RuleProposalRecord): boolean { return this.#repo.update(entity); }
+}
+
+export class PendingClarificationRepo {
+  readonly #database: SqliteDatabase;
+
+  constructor(database: SqliteDatabase) {
+    this.#database = database;
+  }
+
+  create(entity: PendingClarificationRecord): PendingClarificationRecord {
+    this.#database
+      .prepare(
+        `
+          INSERT INTO pending_clarifications (
+            clarification_id,
+            plan_id,
+            created_at,
+            expires_at,
+            status,
+            hud_json,
+            evidence_json
+          )
+          VALUES (
+            @clarification_id,
+            @plan_id,
+            @created_at,
+            @expires_at,
+            @status,
+            @hud_json,
+            @evidence_json
+          )
+        `,
+      )
+      .run({
+        clarification_id: entity.clarificationId,
+        created_at: entity.createdAt,
+        evidence_json: entity.evidenceJson,
+        expires_at: entity.expiresAt,
+        hud_json: entity.hudJson,
+        plan_id: entity.planId,
+        status: entity.status,
+      });
+
+    return entity;
+  }
+
+  delete(id: string): boolean {
+    return (
+      this.#database.prepare(`DELETE FROM pending_clarifications WHERE clarification_id = ?`).run(id)
+        .changes > 0
+    );
+  }
+
+  getById(id: string): PendingClarificationRecord | null {
+    const row = this.#database
+      .prepare(
+        `
+          SELECT *
+          FROM pending_clarifications
+          WHERE clarification_id = ?
+        `,
+      )
+      .get(id) as SqliteRecord | undefined;
+
+    return row === undefined ? null : this.#fromRow(row);
+  }
+
+  listPendingForPlan(planId: string): PendingClarificationRecord[] {
+    return (
+      this.#database
+        .prepare(
+          `
+            SELECT *
+            FROM pending_clarifications
+            WHERE plan_id = ? AND status = 'pending'
+            ORDER BY created_at ASC
+          `,
+        )
+        .all(planId) as SqliteRecord[]
+    ).map((row) => this.#fromRow(row));
+  }
+
+  update(entity: PendingClarificationRecord): boolean {
+    const result = this.#database
+      .prepare(
+        `
+          UPDATE pending_clarifications
+          SET
+            expires_at = @expires_at,
+            status = @status,
+            hud_json = @hud_json,
+            evidence_json = @evidence_json
+          WHERE clarification_id = @clarification_id
+        `,
+      )
+      .run({
+        clarification_id: entity.clarificationId,
+        evidence_json: entity.evidenceJson,
+        expires_at: entity.expiresAt,
+        hud_json: entity.hudJson,
+        status: entity.status,
+      });
+
+    return result.changes > 0;
+  }
+
+  #fromRow(row: SqliteRecord): PendingClarificationRecord {
+    return {
+      clarificationId: row.clarification_id as string,
+      createdAt: row.created_at as string,
+      evidenceJson: row.evidence_json as string,
+      expiresAt: row.expires_at as string | null,
+      hudJson: row.hud_json as string,
+      planId: row.plan_id as string,
+      status: row.status as PendingClarificationRecord["status"],
+    };
+  }
 }
 
 export class PrivacyExclusionsRepo {

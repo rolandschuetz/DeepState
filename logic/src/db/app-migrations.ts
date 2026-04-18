@@ -502,6 +502,27 @@ export const learningAppMigrations: SqliteMigration[] = [
     },
     version: 440,
   },
+  {
+    name: "create pending_clarifications table",
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE pending_clarifications (
+          clarification_id TEXT PRIMARY KEY,
+          plan_id TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          expires_at TEXT,
+          status TEXT NOT NULL DEFAULT 'pending'
+            CHECK (status IN ('pending', 'resolved', 'dismissed')),
+          hud_json TEXT NOT NULL,
+          evidence_json TEXT NOT NULL
+        );
+
+        CREATE INDEX pending_clarifications_plan_status_idx
+          ON pending_clarifications (plan_id, status, created_at DESC);
+      `);
+    },
+    version: 450,
+  },
 ];
 
 export const appMigrations: SqliteMigration[] = [

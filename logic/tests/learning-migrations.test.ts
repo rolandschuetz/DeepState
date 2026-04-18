@@ -44,6 +44,7 @@ describe("learningAppMigrations", () => {
             AND name IN (
               'daily_memory_notes',
               'durable_rules',
+              'pending_clarifications',
               'user_corrections',
               'signal_weights',
               'rule_proposals'
@@ -56,6 +57,7 @@ describe("learningAppMigrations", () => {
     expect(tables.map((table) => table.name)).toEqual([
       "daily_memory_notes",
       "durable_rules",
+      "pending_clarifications",
       "rule_proposals",
       "signal_weights",
       "user_corrections",
@@ -97,7 +99,8 @@ describe("learningAppMigrations", () => {
               'daily_memory_notes_local_date_idx',
               'durable_rules_last_validated_idx',
               'user_corrections_created_at_idx',
-              'rule_proposals_status_created_idx'
+              'rule_proposals_status_created_idx',
+              'pending_clarifications_plan_status_idx'
             )
           ORDER BY name ASC
         `,
@@ -118,6 +121,7 @@ describe("learningAppMigrations", () => {
     expect(indexes.map((index) => index.name)).toEqual([
       "daily_memory_notes_local_date_idx",
       "durable_rules_last_validated_idx",
+      "pending_clarifications_plan_status_idx",
       "rule_proposals_status_created_idx",
       "user_corrections_created_at_idx",
     ]);

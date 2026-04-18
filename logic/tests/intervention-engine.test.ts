@@ -12,6 +12,11 @@ const baseInput = {
   nowMs: Date.parse("2026-04-18T10:00:00Z"),
   observeOnlyTicksRemaining: 0,
   paused: false,
+  praiseInput: {
+    alignedStreakMs: 0,
+    currentFocusBlockKey: "plan:plan_1",
+    lastPraiseEmittedForFocusBlockKey: null,
+  },
   previousRuntimeState: "aligned" as const,
   riskPromptDetail: null,
   sourceClassificationId: null,
@@ -85,5 +90,67 @@ describe("decideIntervention", () => {
 
     expect(second.intervention?.suppressNativeNotification).toBe(true);
     expect(second.intervention?.suppressionReason).toBe("cooldown");
+  });
+
+  it("emits praise when aligned streak exceeds the threshold", () => {
+    const result = decideIntervention({
+      ...baseInput,
+      classificationRuntimeState: "aligned",
+      previousRuntimeState: "aligned",
+      praiseInput: {
+        alignedStreakMs: 26 * 60 * 1000,
+        currentFocusBlockKey: "plan:plan_1",
+        lastPraiseEmittedForFocusBlockKey: null,
+      },
+    });
+
+    expect(result.intervention?.kind).toBe("praise");
+    expect(result.intervention?.title.startsWith("Locked.")).toBe(true);
+  });
+
+  it("does not repeat praise for the same focus block key", () => {
+    const first = decideIntervention({
+      ...baseInput,
+      classificationRuntimeState: "aligned",
+      previousRuntimeState: "aligned",
+      praiseInput: {
+        alignedStreakMs: 26 * 60 * 1000,
+        currentFocusBlockKey: "plan:plan_1",
+        lastPraiseEmittedForFocusBlockKey: null,
+      },
+    });
+
+    expect(first.intervention?.kind).toBe("praise");
+
+    const second = decideIntervention({
+      ...baseInput,
+      classificationRuntimeState: "aligned",
+      previousRuntimeState: "aligned",
+      praiseInput: {
+        alignedStreakMs: 40 * 60 * 1000,
+        currentFocusBlockKey: "plan:plan_1",
+        lastPraiseEmittedForFocusBlockKey: "plan:plan_1",
+      },
+    });
+
+    expect(second.intervention).toBeNull();
+  });
+
+  it("suppresses praise notifications during observe-only", () => {
+    const result = decideIntervention({
+      ...baseInput,
+      classificationRuntimeState: "aligned",
+      observeOnlyTicksRemaining: 5,
+      previousRuntimeState: "aligned",
+      praiseInput: {
+        alignedStreakMs: 26 * 60 * 1000,
+        currentFocusBlockKey: "plan:plan_1",
+        lastPraiseEmittedForFocusBlockKey: null,
+      },
+    });
+
+    expect(result.intervention?.kind).toBe("praise");
+    expect(result.intervention?.suppressNativeNotification).toBe(true);
+    expect(result.intervention?.suppressionReason).toBe("observe_only");
   });
 });

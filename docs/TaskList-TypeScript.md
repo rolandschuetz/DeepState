@@ -105,13 +105,13 @@ By architecting the software with a strict boundary—**the headless TypeScript 
 - [x] Convert accepted evening imports into `DailyMemoryNote`, `RuleProposal`, and reviewable durable-memory candidates without auto-promoting speculative text into truth.
 
 **Phase 7: Ambiguity Resolution & Praise**
-- [ ] Implement stable ambiguity detection so clarification is required only after prolonged sustained uncertainty.
-- [ ] Implement `resolve_ambiguity` command logic: apply manual override string, record labeled example, and optionally add it to `durable_rules`.
-- [ ] Support a "remember this pattern" path that stores validated task/support-work mappings without overfitting one-off contexts.
-- [ ] Track signal-weight updates from corrections and outcomes: reward correct predictions, penalize false positives/false negatives, and decay stale weights over time.
-- [ ] Store durable-rule provenance fields (`source`, `confidence`, `recency`, `last_validated_at`) so promoted rules remain inspectable and reviewable.
-- [ ] Implement praise eligibility: an uninterrupted `aligned` streak longer than 25 minutes. Gated strictly behind the observe-only grace period.
-- [ ] Generate praise text strictly using `messages.ts` templates (`Locked.` prefix). Cap at max 1 praise per focus block.
+- [x] Implement stable ambiguity detection so clarification is required only after prolonged sustained uncertainty.
+- [x] Implement `resolve_ambiguity` command logic: apply manual override string, record labeled example, and optionally add it to `durable_rules`.
+- [x] Support a "remember this pattern" path that stores validated task/support-work mappings without overfitting one-off contexts.
+- [x] Track signal-weight updates from corrections and outcomes: reward correct predictions, penalize false positives/false negatives, and decay stale weights over time.
+- [x] Store durable-rule provenance fields (`source`, `confidence`, `recency`, `last_validated_at`) so promoted rules remain inspectable and reviewable.
+- [x] Implement praise eligibility: an uninterrupted `aligned` streak longer than 25 minutes. Gated strictly behind the observe-only grace period.
+- [x] Generate praise text strictly using `messages.ts` templates (`Locked.` prefix). Cap at max 1 praise per focus block.
 
 **Phase 8: Two-Tick Scheduler, Diagnostics, and Maintenance**
 - [ ] Implement bootstrap order explicitly: load config, open DB, run migrations, load durable memory/preferences, probe Screenpipe, start bridge server, start scheduler, and publish initial state.

@@ -291,6 +291,7 @@ export const handleMorningFlowCommand = ({
   importedAt?: string;
   runtimeSessionId?: string;
 }): SystemState => {
+  void currentState;
   const exchange = parseCoachingExchange(command.payload.raw_text);
 
   if (exchange.exchange_type === "morning_plan") {

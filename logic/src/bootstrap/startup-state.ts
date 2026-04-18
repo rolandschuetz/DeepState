@@ -12,7 +12,7 @@ import {
   generateEveningPrompt,
   hasAcceptedEveningDebriefForLocalDate,
 } from "../planning/evening-debrief-context.js";
-import { DailyPlanRepo, TaskRepo } from "../repos/sqlite-repositories.js";
+import { DailyPlanRepo, PendingClarificationRepo, TaskRepo } from "../repos/sqlite-repositories.js";
 import {
   applyScreenpipeHealthToSystemState,
   type ScreenpipeHealthProbe,
@@ -85,6 +85,31 @@ export const buildStartupSystemState = ({
       : applyScreenpipeHealthToSystemState(systemState, screenpipeHealth);
   }
 
+  const pendingClarificationRepo = new PendingClarificationRepo(database);
+  const pendingRows = pendingClarificationRepo.listPendingForPlan(latestPlan.planId);
+  const pendingRow = pendingRows[0] ?? null;
+
+  let clarificationHud: SystemState["clarification_hud"] = null;
+  const ambiguityQueue: SystemState["dashboard"]["ambiguity_queue"] = [];
+
+  if (pendingRow !== null) {
+    try {
+      clarificationHud = JSON.parse(pendingRow.hudJson) as NonNullable<
+        SystemState["clarification_hud"]
+      >;
+
+      ambiguityQueue.push({
+        ambiguity_id: clarificationHud.clarification_id,
+        created_at: pendingRow.createdAt,
+        prompt: clarificationHud.prompt,
+        resolution_summary: null,
+        status: "pending",
+      });
+    } catch {
+      clarificationHud = null;
+    }
+  }
+
   const plannedTasks = taskRepo
     .listAll()
     .filter((task) => task.planId === latestPlan.planId)
@@ -116,8 +141,10 @@ export const buildStartupSystemState = ({
 
   const systemState = systemStateSchema.parse({
     ...baseState,
+    clarification_hud: clarificationHud,
     dashboard: {
       ...baseState.dashboard,
+      ambiguity_queue: ambiguityQueue,
       header: {
         ...baseState.dashboard.header,
         local_date: latestPlan.localDate,

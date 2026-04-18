@@ -26,10 +26,12 @@ const APP_OWNED_TABLES_IN_EXPORT_ORDER = [
   "user_corrections",
   "signal_weights",
   "rule_proposals",
+  "pending_clarifications",
 ] as const;
 
 const APP_OWNED_TABLES_IN_PURGE_ORDER = [
   "intervention_outcomes",
+  "pending_clarifications",
   "interventions",
   "progress_estimates",
   "classifications",

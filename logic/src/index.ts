@@ -201,6 +201,7 @@ export {
   InterventionRepo,
   MemoryRepo,
   ObservationRepo,
+  PendingClarificationRepo,
   PrivacyExclusionsRepo,
   ProgressRepo,
   RuleProposalRepo,
@@ -223,6 +224,7 @@ export type {
   InterventionOutcomeRecord,
   InterventionRecord,
   ObservationRecord,
+  PendingClarificationRecord,
   PrivacyExclusionRecord,
   ProgressEstimateRecord,
   RuleProposalRecord,
@@ -244,6 +246,35 @@ export type {
   Phase5SlowTickResult,
   RunPhase5SlowTickParams,
 } from "./runtime/phase5-orchestrator.js";
+export {
+  createInitialAmbiguityPolicyMemory,
+  fingerprintForContextWindow,
+  markHudShownForFingerprint,
+  NEW_CONTEXT_GUARD_MS,
+  STABLE_UNCERTAIN_DWELL_MS,
+  tickAmbiguityPolicy,
+} from "./ambiguity/ambiguity-policy.js";
+export type { AmbiguityPolicyMemory } from "./ambiguity/ambiguity-policy.js";
+export {
+  buildClarificationHud,
+  evidenceSnapshotFromWindow,
+} from "./ambiguity/build-clarification-hud.js";
+export type {
+  ClarificationHudModel,
+  EvidenceSnapshot,
+} from "./ambiguity/build-clarification-hud.js";
+export {
+  applyEvidenceSignalBumps,
+  buildConditionalRuleText,
+  createDurableRuleFromResolution,
+  upsertSignalWeight,
+} from "./ambiguity/learning-from-resolution.js";
+export {
+  applyResolveAmbiguityToSystemState,
+  handleResolveAmbiguityCommand,
+} from "./ambiguity/resolve-ambiguity.js";
+export type { ResolveAmbiguityResult } from "./ambiguity/resolve-ambiguity.js";
+
 export {
   applyPauseToSystemState,
   decideInterventionGate,
@@ -278,6 +309,15 @@ export type {
   RiskSignals,
   TaskEpisodeRollup,
 } from "./progress/risk-detector.js";
+
+export {
+  alignedStreakDurationMs,
+  createInitialPraisePolicyMemory,
+  nextPraisePolicyMemory,
+  pickPraiseFocusBlockKey,
+  PRAISE_MIN_ALIGNED_MS,
+} from "./interventions/praise-engine.js";
+export type { PraisePolicyMemory } from "./interventions/praise-engine.js";
 
 export { messages } from "./interventions/messages.js";
 export {
