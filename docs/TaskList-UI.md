@@ -28,7 +28,7 @@ This task list reflects the tightened V1 MVP architecture:
 - [x] Surface bridge connectivity/version-mismatch problems and command result failures in the diagnostics UI instead of failing silently.
 
 **Phase 1: Paste Sanitizer & Morning Flow**
-- [ ] Write a 20-line **Paste Sanitizer** String Extension. This function must catch manual copy/paste sloppiness before submission by automatically stripping markdown code fences (```json), stripping out conversational intro/outro dialogue, and normalizing smart quotes globally into standard quotation marks.
+- [x] Write a 20-line **Paste Sanitizer** String Extension. This function must catch manual copy/paste sloppiness before submission by automatically stripping markdown code fences (```json), stripping out conversational intro/outro dialogue, and normalizing smart quotes globally into standard quotation marks.
 - [ ] Create `MorningFlowView` displaying the read-only morning prompt and `Copy to Clipboard` feature.
 - [ ] Add a multiline text area for ChatGPT's response. Run `.pasteSanitize()` on the text content, encapsulate it inside the `import_coaching_exchange` object, and dispatch via `POST /command`.
 - [ ] Decode TS parser errors inline cleanly so the user can easily re-edit their payload string.
