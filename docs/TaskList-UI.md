@@ -35,16 +35,16 @@ This task list reflects the tightened V1 MVP architecture:
 - [x] Add explicit success confirmation, edit/re-import affordance, and duplicate-submit protection for in-flight morning imports.
 
 **Phase 2: Menu Bar Status**
-- [ ] Create a minimal `MenuBarExtra` view implementation.
-- [ ] Bind icon tint colors natively to the `MenuBarViewModel` state payload logic:
+- [x] Create a minimal `MenuBarExtra` view implementation.
+- [x] Bind icon tint colors natively to the `MenuBarViewModel` state payload logic:
   - `aligned` -> Green
   - `aligned` + `is_support == true` -> Blue
   - `uncertain` / `soft_drift` -> Yellow
   - `hard_drift` -> Red
   - `paused` / `no_plan` / `degraded` -> Gray
-- [ ] Render the active task label, timer, and current focus scope within the dropdown.
-- [ ] Render a compact confidence indicator and non-color state label so the menu bar remains readable and accessible.
-- [ ] Add "Pause Coaching" and explicit "Take a Break" actions routing unified actions cleanly back to TS.
+- [x] Render the active task label, timer, and current focus scope within the dropdown.
+- [x] Render a compact confidence indicator and non-color state label so the menu bar remains readable and accessible.
+- [x] Add "Pause Coaching" and explicit "Take a Break" actions routing unified actions cleanly back to TS.
 
 **Phase 3: Explainability Dashboard & Settings**
 - [ ] Build the main dashboard window to track active focus goals/hours remaining against progress percentages.

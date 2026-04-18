@@ -7,8 +7,8 @@ struct INeedABossAgentApp: App {
   @StateObject private var appStateStore = AppStateStore()
 
   var body: some Scene {
-    MenuBarExtra("INeedABossAgent", systemImage: "brain.head.profile") {
-      BootstrapView(
+    MenuBarExtra {
+      MenuBarExtraView(
         bridgeClient: bridgeClient,
         appStateStore: appStateStore
       )
@@ -18,6 +18,11 @@ struct INeedABossAgentApp: App {
       .onReceive(bridgeClient.$latestState) { latestState in
         appStateStore.apply(latestState)
       }
+    } label: {
+      MenuBarExtraLabelView(
+        connectionState: bridgeClient.connectionState,
+        menuBarState: appStateStore.menuBarState
+      )
     }
     .menuBarExtraStyle(.window)
   }
