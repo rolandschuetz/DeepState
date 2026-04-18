@@ -3,6 +3,11 @@ export {
 } from "./server/bridge-server.js";
 
 export {
+  isRuntimeEvaluationEnabled,
+  runWhenModeIsRunning,
+} from "./runtime/mode-gate.js";
+
+export {
   createDefaultSystemState,
 } from "./system-state/default-system-state.js";
 
