@@ -34,6 +34,7 @@ export type {
 export {
   createScreenpipeSearchPoller,
   normalizeScreenpipeRecordTimestamps,
+  ScreenpipeSchedulerBudgetExceededError,
 } from "./screenpipe/search-poller.js";
 
 export {

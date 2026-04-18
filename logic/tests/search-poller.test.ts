@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createScreenpipeSearchPoller,
   normalizeScreenpipeRecordTimestamps,
+  ScreenpipeSchedulerBudgetExceededError,
 } from "../src/index.js";
 
 describe("normalizeScreenpipeRecordTimestamps", () => {
@@ -60,6 +61,11 @@ describe("createScreenpipeSearchPoller", () => {
       startAt: "2026-04-18T10:00:00.000Z",
     });
     expect(result.cursor.lastSuccessfulIngestAt).toBe("2026-04-18T10:00:00.000Z");
+    expect(result.diagnostics).toEqual({
+      exceededSchedulerBudget: false,
+      missingFrameContextCount: 0,
+      partialReason: null,
+    });
     expect(result.records).toHaveLength(1);
   });
 
@@ -115,6 +121,7 @@ describe("createScreenpipeSearchPoller", () => {
       lastSuccessfulIngestAt: "2026-04-18T10:00:20.000Z",
       recentRecordKeys: ["id:event_1", "id:event_2"],
     });
+    expect(result.diagnostics.partialReason).toBe(null);
   });
 
   it("drops records outside the requested lookback window after UTC normalization", async () => {
@@ -158,5 +165,74 @@ describe("createScreenpipeSearchPoller", () => {
       },
     ]);
     expect(result.cursor.lastSuccessfulIngestAt).toBe("2026-04-18T10:01:01.000Z");
+  });
+
+  it("surfaces partial payloads and missing frame context explicitly", async () => {
+    const fetchImpl = vi.fn<typeof fetch>(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            data: [
+              {
+                frame_id: 99,
+                id: "event_1",
+                timestamp: "2026-04-18T10:00:05Z",
+              },
+            ],
+            partial: true,
+          }),
+          {
+            headers: {
+              "content-type": "application/json",
+            },
+            status: 200,
+          },
+        ),
+      ),
+    );
+    const poller = createScreenpipeSearchPoller({
+      baseUrl: "http://127.0.0.1:3030",
+      fetch: fetchImpl,
+    });
+
+    const result = await poller.poll({
+      endAt: "2026-04-18T10:01:00Z",
+    });
+
+    expect(result.records).toEqual([
+      {
+        frame_id: 99,
+        id: "event_1",
+        timestamp: "2026-04-18T10:00:05.000Z",
+      },
+    ]);
+    expect(result.diagnostics).toEqual({
+      exceededSchedulerBudget: false,
+      missingFrameContextCount: 1,
+      partialReason: "screenpipe_marked_partial",
+    });
+  });
+
+  it("fails explicitly when /search exceeds the scheduler budget", async () => {
+    const fetchImpl = vi.fn<typeof fetch>((_input, init) => {
+      const signal = init?.signal;
+
+      return new Promise<Response>((_resolve, reject) => {
+        signal?.addEventListener("abort", () => {
+          reject(new DOMException("The operation was aborted.", "AbortError"));
+        });
+      });
+    });
+    const poller = createScreenpipeSearchPoller({
+      baseUrl: "http://127.0.0.1:3030",
+      fetch: fetchImpl,
+      schedulerBudgetMs: 5,
+    });
+
+    await expect(
+      poller.poll({
+        endAt: "2026-04-18T10:01:00Z",
+      }),
+    ).rejects.toBeInstanceOf(ScreenpipeSchedulerBudgetExceededError);
   });
 });

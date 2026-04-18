@@ -17,6 +17,11 @@ export type ScreenpipeSearchPollOptions = {
 export type ScreenpipeSearchPollResult = {
   cursor: ScreenpipeSearchCursor;
   deduplicatedCount: number;
+  diagnostics: {
+    exceededSchedulerBudget: boolean;
+    missingFrameContextCount: number;
+    partialReason: "missing_frame_context" | "screenpipe_marked_partial" | null;
+  };
   rawCount: number;
   records: unknown[];
   requestWindow: {
@@ -32,6 +37,7 @@ export type CreateScreenpipeSearchPollerOptions = {
   limit?: number;
   overlapMs?: number;
   recentKeyCapacity?: number;
+  schedulerBudgetMs?: number;
 };
 
 const DEFAULT_INITIAL_LOOKBACK_MS = 5 * 60 * 1000;
@@ -52,6 +58,14 @@ const TIMESTAMP_KEYS = new Set([
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+
+const hasTruthyBooleanField = (value: unknown, keys: string[]): boolean =>
+  isPlainObject(value) &&
+  keys.some((key) => {
+    const candidate = value[key];
+
+    return candidate === true;
+  });
 
 const parseResponsePayload = async (response: Response): Promise<unknown> =>
   response.headers.get("content-type")?.includes("application/json")
@@ -76,6 +90,68 @@ const extractSearchRecords = (payload: unknown): unknown[] => {
   }
 
   return [];
+};
+
+const hasFrameReference = (record: unknown): boolean => {
+  if (!isPlainObject(record)) {
+    return false;
+  }
+
+  for (const key of ["frame_id", "frameId", "frame_ids", "frameIds"]) {
+    const value = record[key];
+
+    if (
+      typeof value === "string" ||
+      typeof value === "number" ||
+      (Array.isArray(value) && value.length > 0)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+const hasFrameContextPayload = (record: unknown): boolean => {
+  if (!isPlainObject(record)) {
+    return false;
+  }
+
+  for (const key of [
+    "frame_context",
+    "frameContext",
+    "ocr_text",
+    "ocrText",
+    "accessibility_text",
+    "accessibilityText",
+    "text",
+    "ui_text",
+    "uiText",
+    "text_lines",
+    "textLines",
+    "window_title",
+    "windowTitle",
+    "title",
+    "url",
+    "page_url",
+    "pageUrl",
+  ]) {
+    const value = record[key];
+
+    if (typeof value === "string" && value.trim().length > 0) {
+      return true;
+    }
+
+    if (Array.isArray(value) && value.length > 0) {
+      return true;
+    }
+
+    if (isPlainObject(value) && Object.keys(value).length > 0) {
+      return true;
+    }
+  }
+
+  return false;
 };
 
 const findTimestamp = (record: unknown): string | null => {
@@ -143,6 +219,13 @@ const buildRecordKey = (record: unknown): string => {
 const subtractMs = (timestamp: string, durationMs: number): string =>
   new Date(Date.parse(timestamp) - durationMs).toISOString();
 
+export class ScreenpipeSchedulerBudgetExceededError extends Error {
+  constructor(budgetMs: number) {
+    super(`Screenpipe /search exceeded scheduler budget of ${budgetMs}ms.`);
+    this.name = "ScreenpipeSchedulerBudgetExceededError";
+  }
+}
+
 export const createScreenpipeSearchPoller = ({
   baseUrl,
   fetch: fetchImpl = globalThis.fetch,
@@ -150,6 +233,7 @@ export const createScreenpipeSearchPoller = ({
   limit = DEFAULT_LIMIT,
   overlapMs = DEFAULT_OVERLAP_MS,
   recentKeyCapacity = DEFAULT_RECENT_KEY_CAPACITY,
+  schedulerBudgetMs,
 }: CreateScreenpipeSearchPollerOptions): ScreenpipeSearchPoller => {
   const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
 
@@ -170,19 +254,54 @@ export const createScreenpipeSearchPoller = ({
         limit: String(limit),
         start_time: startAt,
       });
-      const response = await fetchImpl(
-        `${normalizedBaseUrl}/search?${query.toString()}`,
-        { method: "GET" },
-      );
+      const abortController =
+        schedulerBudgetMs === undefined ? null : new AbortController();
+      const budgetTimeout =
+        abortController === null
+          ? null
+          : setTimeout(() => abortController.abort(), schedulerBudgetMs);
+      let response: Response;
+
+      try {
+        response = await fetchImpl(`${normalizedBaseUrl}/search?${query.toString()}`, {
+          method: "GET",
+          ...(abortController === null ? {} : { signal: abortController.signal }),
+        });
+      } catch (error) {
+        if (
+          schedulerBudgetMs !== undefined &&
+          error instanceof Error &&
+          error.name === "AbortError"
+        ) {
+          throw new ScreenpipeSchedulerBudgetExceededError(schedulerBudgetMs);
+        }
+
+        throw error;
+      } finally {
+        if (budgetTimeout !== null) {
+          clearTimeout(budgetTimeout);
+        }
+      }
 
       if (!response.ok) {
         throw new Error(`Screenpipe /search failed with HTTP ${response.status}.`);
       }
 
       const payload = await parseResponsePayload(response);
+      const partialFromPayload = hasTruthyBooleanField(payload, [
+        "partial",
+        "is_partial",
+        "isPartial",
+        "truncated",
+        "has_more",
+        "hasMore",
+      ]);
       const rawRecords = extractSearchRecords(payload).map((record) =>
         normalizeScreenpipeRecordTimestamps(record),
       );
+      const missingFrameContextCount = rawRecords.filter(
+        (record) => hasFrameReference(record) && !hasFrameContextPayload(record),
+      ).length;
       const seenKeys = new Set(cursor.recentRecordKeys);
       const nextRecords: unknown[] = [];
       let deduplicatedCount = 0;
@@ -221,6 +340,15 @@ export const createScreenpipeSearchPoller = ({
           recentRecordKeys: [...seenKeys].slice(-recentKeyCapacity),
         },
         deduplicatedCount,
+        diagnostics: {
+          exceededSchedulerBudget: false,
+          missingFrameContextCount,
+          partialReason: partialFromPayload
+            ? "screenpipe_marked_partial"
+            : missingFrameContextCount > 0
+              ? "missing_frame_context"
+              : null,
+        },
         rawCount: rawRecords.length,
         records: nextRecords,
         requestWindow: {

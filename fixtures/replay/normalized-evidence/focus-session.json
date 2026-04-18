@@ -1,0 +1,191 @@
+{
+  "normalized_evidence": [
+    {
+      "accessibilityText": null,
+      "activitySummary": {
+        "dominantSignal": "typing",
+        "isActive": true,
+        "totalInteractions": 19
+      },
+      "appIdentifier": "cursor",
+      "appName": "Cursor",
+      "interactionSummary": {
+        "appSwitches": 1,
+        "clickCount": 3,
+        "scrollEvents": 5,
+        "typingSeconds": 10
+      },
+      "keywords": ["checkout", "api"],
+      "meetingHints": {
+        "collaboratorHints": [],
+        "hasAudioTranscript": false,
+        "isLikelyMeeting": false,
+        "reasons": []
+      },
+      "observedAt": "2026-04-18T09:00:00.000Z",
+      "ocrText": null,
+      "screenpipeRefs": {
+        "elementIds": [11],
+        "frameIds": [101],
+        "recordIds": ["record_1"]
+      },
+      "source": "screenpipe_search",
+      "uiText": ["checkout form", "save handler"],
+      "url": "https://github.com/openai/repo/pull/1",
+      "urlSummary": {
+        "host": "github.com",
+        "normalizedUrl": "https://github.com/openai/repo/pull/1",
+        "pathTokens": ["openai", "repo", "pull", "1"]
+      },
+      "windowTitle": "checkout.ts - INeedABossAgent"
+    },
+    {
+      "accessibilityText": null,
+      "activitySummary": {
+        "dominantSignal": "scrolling",
+        "isActive": true,
+        "totalInteractions": 8
+      },
+      "appIdentifier": "google.chrome",
+      "appName": "Google Chrome",
+      "interactionSummary": {
+        "appSwitches": 0,
+        "clickCount": 1,
+        "scrollEvents": 7,
+        "typingSeconds": 0
+      },
+      "keywords": ["payments", "docs"],
+      "meetingHints": {
+        "collaboratorHints": [],
+        "hasAudioTranscript": false,
+        "isLikelyMeeting": false,
+        "reasons": []
+      },
+      "observedAt": "2026-04-18T09:00:40.000Z",
+      "ocrText": "Stripe payment docs",
+      "screenpipeRefs": {
+        "elementIds": [12],
+        "frameIds": [102],
+        "recordIds": ["record_2"]
+      },
+      "source": "screenpipe_search",
+      "uiText": [],
+      "url": "https://docs.stripe.com/payments",
+      "urlSummary": {
+        "host": "docs.stripe.com",
+        "normalizedUrl": "https://docs.stripe.com/payments",
+        "pathTokens": ["payments"]
+      },
+      "windowTitle": "Stripe Docs - Payments"
+    },
+    {
+      "accessibilityText": null,
+      "activitySummary": {
+        "dominantSignal": "typing",
+        "isActive": true,
+        "totalInteractions": 4
+      },
+      "appIdentifier": "slack",
+      "appName": "Slack",
+      "interactionSummary": {
+        "appSwitches": 0,
+        "clickCount": 0,
+        "scrollEvents": 0,
+        "typingSeconds": 4
+      },
+      "keywords": ["standup"],
+      "meetingHints": {
+        "collaboratorHints": ["Alice", "Bob"],
+        "hasAudioTranscript": true,
+        "isLikelyMeeting": true,
+        "reasons": [
+          "audio_heavy_low_typing",
+          "collaborator_hint",
+          "conferencing_app",
+          "meeting_keyword"
+        ]
+      },
+      "observedAt": "2026-04-18T09:02:20.000Z",
+      "ocrText": null,
+      "screenpipeRefs": {
+        "elementIds": [13],
+        "frameIds": [103],
+        "recordIds": ["record_3"]
+      },
+      "source": "screenpipe_search",
+      "uiText": ["daily standup"],
+      "url": null,
+      "urlSummary": {
+        "host": null,
+        "normalizedUrl": null,
+        "pathTokens": []
+      },
+      "windowTitle": "Slack Huddle - Product"
+    }
+  ],
+  "expected_context_windows": [
+    {
+      "startedAt": "2026-04-18T09:00:00.000Z",
+      "endedAt": "2026-04-18T09:00:40.000Z",
+      "dwellDurationSeconds": 40,
+      "sourceRecordIds": ["record_1", "record_2"],
+      "summary": {
+        "activeApps": ["Cursor", "Google Chrome"],
+        "activitySummary": {
+          "isActive": true,
+          "totalInteractions": 27,
+          "typingSeconds": 10,
+          "scrollEvents": 12,
+          "clickCount": 4,
+          "appSwitches": 1
+        },
+        "keywords": ["checkout", "api", "payments", "docs"],
+        "meetingContext": {
+          "collaboratorHints": [],
+          "isLikelyMeeting": false,
+          "reasons": [],
+          "titles": []
+        },
+        "urls": [
+          "https://github.com/openai/repo/pull/1",
+          "https://docs.stripe.com/payments"
+        ],
+        "windowTitles": [
+          "checkout.ts - INeedABossAgent",
+          "Stripe Docs - Payments"
+        ]
+      }
+    },
+    {
+      "startedAt": "2026-04-18T09:02:20.000Z",
+      "endedAt": "2026-04-18T09:02:20.000Z",
+      "dwellDurationSeconds": 0,
+      "sourceRecordIds": ["record_3"],
+      "summary": {
+        "activeApps": ["Slack"],
+        "activitySummary": {
+          "isActive": true,
+          "totalInteractions": 4,
+          "typingSeconds": 4,
+          "scrollEvents": 0,
+          "clickCount": 0,
+          "appSwitches": 0
+        },
+        "keywords": ["standup"],
+        "meetingContext": {
+          "collaboratorHints": ["Alice", "Bob"],
+          "isLikelyMeeting": true,
+          "reasons": [
+            "audio_heavy_low_typing",
+            "collaborator_hint",
+            "conferencing_app",
+            "meeting_keyword"
+          ],
+          "titles": ["Slack Huddle - Product"]
+        },
+        "urls": [],
+        "windowTitles": ["Slack Huddle - Product"]
+      }
+    }
+  ]
+}

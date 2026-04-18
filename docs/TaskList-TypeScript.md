@@ -51,8 +51,8 @@ By architecting the software with a strict boundary—**the headless TypeScript 
 - [x] Implement `ContextAggregator` to roll raw events into contiguous 90s `ContextWindow`s.
 - [x] Preserve short sequence context around each window (`what came before`, `what followed`, dwell duration) so valid support work is classifiable.
 - [x] Tag likely meeting contexts from conferencing apps, audio-heavy low-typing periods, and available meeting titles/collaborator hints.
-- [ ] Add replay fixtures for normalized evidence to test classification offline.
-- [ ] Handle adapter edge cases explicitly: partial Screenpipe results, missing frame context, overlapping duplicate polls, and slow queries that exceed the scheduler budget.
+- [x] Add replay fixtures for normalized evidence to test classification offline.
+- [x] Handle adapter edge cases explicitly: partial Screenpipe results, missing frame context, overlapping duplicate polls, and slow queries that exceed the scheduler budget.
 
 **Phase 3: Morning Flow Export & Unified JSON Import**
 - [ ] Trigger the morning flow on first meaningful activity, first menu bar open of the day, manual "Start My Day", or manual plan reset.
