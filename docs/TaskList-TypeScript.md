@@ -26,7 +26,7 @@ By architecting the software with a strict boundary—**the headless TypeScript 
 **Phase 1: Persistence & Canonical Memory (2 Layers)**
 - [x] Set up `better-sqlite3`. Enable `WAL` journal mode and `busy_timeout`.
 - [x] Write a lightweight schema migration runner with explicit versioning.
-- [ ] Add migration guard rails: idempotent startup runner, migration lock/guard, rollback handling for failed migrations, and a smoke-test fixture database.
+- [x] Add migration guard rails: idempotent startup runner, migration lock/guard, rollback handling for failed migrations, and a smoke-test fixture database.
 - [ ] Base migrations: `app_settings` (including a field for `observe_only_ticks_remaining`), `privacy_exclusions`, and `runtime_health_events`.
 - [ ] Planning migrations: `daily_plans`, `goal_contracts`, `task_contracts`, `focus_blocks`, and `import_audit_log`.
 - [ ] Observation migrations: `observations`, `context_windows`, `episodes`, `classifications`, `progress_estimates`, `interventions`, and `intervention_outcomes`.

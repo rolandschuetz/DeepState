@@ -19,11 +19,22 @@ export type {
 export {
   listAppliedMigrations,
   runMigrations,
+  runStartupMigrations,
+  withMigrationLock,
 } from "./db/migrations.js";
 
 export type {
   AppliedMigration,
   SqliteMigration,
+} from "./db/migrations.js";
+
+export {
+  migrationSmokeTestFixtureMigrations,
+} from "./db/migration-smoke-test-fixture.js";
+
+export {
+  MigrationExecutionError,
+  MigrationLockedError,
 } from "./db/migrations.js";
 
 export {

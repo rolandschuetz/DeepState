@@ -6,8 +6,13 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   listAppliedMigrations,
+  MigrationExecutionError,
+  MigrationLockedError,
+  migrationSmokeTestFixtureMigrations,
   openDatabase,
   runMigrations,
+  runStartupMigrations,
+  withMigrationLock,
   type SqliteDatabase,
   type SqliteMigration,
 } from "../src/index.js";
@@ -61,6 +66,7 @@ describe("runMigrations", () => {
     expect(tables.map((table) => table.name)).toEqual([
       "app_settings",
       "daily_plans",
+      "schema_migration_lock",
       "schema_migrations",
     ]);
   });
@@ -103,5 +109,55 @@ describe("runMigrations", () => {
         },
       ]),
     ).toThrow(/Duplicate migration version/);
+  });
+
+  it("supports idempotent startup execution", () => {
+    const database = createDatabase();
+
+    const firstRun = runStartupMigrations(database, migrationSmokeTestFixtureMigrations);
+    const secondRun = runStartupMigrations(database, migrationSmokeTestFixtureMigrations);
+
+    expect(firstRun).toHaveLength(2);
+    expect(secondRun).toHaveLength(2);
+    expect(listAppliedMigrations(database).map((migration) => migration.version)).toEqual([
+      1,
+      2,
+    ]);
+  });
+
+  it("rejects concurrent guarded execution when the migration lock is held", () => {
+    const database = createDatabase();
+
+    expect(() =>
+      withMigrationLock(database, () =>
+        runStartupMigrations(database, migrationSmokeTestFixtureMigrations),
+      ),
+    ).toThrow(MigrationLockedError);
+  });
+
+  it("rolls back failed migrations without recording partial state", () => {
+    const database = createDatabase();
+
+    expect(() =>
+      runStartupMigrations(database, [
+        {
+          name: "partial table then fail",
+          up: (db) => {
+            db.exec("CREATE TABLE should_rollback (id INTEGER PRIMARY KEY)");
+            throw new Error("boom");
+          },
+          version: 1,
+        },
+      ]),
+    ).toThrow(MigrationExecutionError);
+
+    const rolledBackTable = database
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'should_rollback'",
+      )
+      .get() as { name: string } | undefined;
+
+    expect(rolledBackTable).toBeUndefined();
+    expect(listAppliedMigrations(database)).toEqual([]);
   });
 });
