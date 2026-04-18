@@ -72,4 +72,122 @@ export const baseAppMigrations: SqliteMigration[] = [
   },
 ];
 
-export const appMigrations: SqliteMigration[] = [...baseAppMigrations];
+export const planningAppMigrations: SqliteMigration[] = [
+  {
+    name: "create daily_plans table",
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE daily_plans (
+          plan_id TEXT PRIMARY KEY,
+          local_date TEXT NOT NULL UNIQUE,
+          imported_at TEXT NOT NULL,
+          total_intended_work_seconds INTEGER NOT NULL
+            CHECK (total_intended_work_seconds > 0),
+          notes_for_tracker TEXT
+        );
+      `);
+    },
+    version: 200,
+  },
+  {
+    name: "create goal_contracts table",
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE goal_contracts (
+          goal_id TEXT PRIMARY KEY,
+          plan_id TEXT NOT NULL,
+          title TEXT NOT NULL,
+          success_definition TEXT NOT NULL,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (plan_id) REFERENCES daily_plans (plan_id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX goal_contracts_plan_sort_idx
+          ON goal_contracts (plan_id, sort_order ASC);
+      `);
+    },
+    version: 210,
+  },
+  {
+    name: "create task_contracts table",
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE task_contracts (
+          task_id TEXT PRIMARY KEY,
+          plan_id TEXT NOT NULL,
+          goal_id TEXT,
+          title TEXT NOT NULL,
+          success_definition TEXT NOT NULL,
+          total_remaining_effort_seconds INTEGER
+            CHECK (total_remaining_effort_seconds IS NULL OR total_remaining_effort_seconds >= 0),
+          intended_work_seconds_today INTEGER NOT NULL
+            CHECK (intended_work_seconds_today >= 0),
+          progress_kind TEXT NOT NULL
+            CHECK (progress_kind IN ('time_based', 'milestone_based', 'artifact_based', 'hybrid')),
+          allowed_support_work_json TEXT NOT NULL,
+          likely_detours_json TEXT NOT NULL,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (plan_id) REFERENCES daily_plans (plan_id) ON DELETE CASCADE,
+          FOREIGN KEY (goal_id) REFERENCES goal_contracts (goal_id) ON DELETE SET NULL
+        );
+
+        CREATE INDEX task_contracts_plan_sort_idx
+          ON task_contracts (plan_id, sort_order ASC);
+      `);
+    },
+    version: 220,
+  },
+  {
+    name: "create focus_blocks table",
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE focus_blocks (
+          focus_block_id TEXT PRIMARY KEY,
+          plan_id TEXT NOT NULL,
+          task_id TEXT,
+          title TEXT NOT NULL,
+          starts_at TEXT NOT NULL,
+          ends_at TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          CHECK (ends_at > starts_at),
+          FOREIGN KEY (plan_id) REFERENCES daily_plans (plan_id) ON DELETE CASCADE,
+          FOREIGN KEY (task_id) REFERENCES task_contracts (task_id) ON DELETE SET NULL
+        );
+
+        CREATE INDEX focus_blocks_plan_starts_idx
+          ON focus_blocks (plan_id, starts_at ASC);
+      `);
+    },
+    version: 230,
+  },
+  {
+    name: "create import_audit_log table",
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE import_audit_log (
+          audit_id TEXT PRIMARY KEY,
+          source TEXT NOT NULL,
+          exchange_type TEXT NOT NULL
+            CHECK (exchange_type IN ('morning_plan', 'evening_debrief')),
+          schema_version TEXT NOT NULL,
+          local_date TEXT NOT NULL,
+          accepted INTEGER NOT NULL CHECK (accepted IN (0, 1)),
+          payload_json TEXT NOT NULL,
+          imported_at TEXT NOT NULL,
+          note TEXT
+        );
+
+        CREATE INDEX import_audit_log_imported_at_idx
+          ON import_audit_log (imported_at DESC);
+      `);
+    },
+    version: 240,
+  },
+];
+
+export const appMigrations: SqliteMigration[] = [
+  ...baseAppMigrations,
+  ...planningAppMigrations,
+];

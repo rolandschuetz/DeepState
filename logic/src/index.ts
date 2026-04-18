@@ -10,6 +10,7 @@ export {
 export {
   appMigrations,
   baseAppMigrations,
+  planningAppMigrations,
 } from "./db/app-migrations.js";
 
 export {
