@@ -1,4 +1,10 @@
 export {
+  coachingExchangeSchema,
+  eveningDebriefExchangeSchema,
+  morningPlanExchangeSchema,
+} from "./bridge/coaching-exchange.js";
+
+export {
   commandSchema,
   importCoachingExchangeCommandSchema,
   notificationActionCommandSchema,
@@ -39,6 +45,14 @@ export type {
   ResumeCommand,
   UpdateExclusionsCommand,
 } from "./bridge/command.js";
+
+export type {
+  CoachingExchange,
+  EveningDebriefExchange,
+  EveningTaskOutcome,
+  MorningPlanExchange,
+  MorningPlanTask,
+} from "./bridge/coaching-exchange.js";
 
 export type {
   ExplainabilityItem,
