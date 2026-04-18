@@ -17,6 +17,16 @@ export type {
 } from "./db/database.js";
 
 export {
+  listAppliedMigrations,
+  runMigrations,
+} from "./db/migrations.js";
+
+export type {
+  AppliedMigration,
+  SqliteMigration,
+} from "./db/migrations.js";
+
+export {
   createDiagnosticsLogSink,
   createModuleLogger,
   DiagnosticsLogStore,
