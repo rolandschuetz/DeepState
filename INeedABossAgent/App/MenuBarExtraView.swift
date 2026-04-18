@@ -171,7 +171,6 @@ struct MenuBarExtraView: View {
 
   @ObservedObject var bridgeClient: BridgeClient
   @ObservedObject var appStateStore: AppStateStore
-  @ObservedObject var runtimeEventCoordinator: RuntimeEventCoordinator
 
   var body: some View {
     let dropdownContent = MenuBarExtraPresenter.dropdownContent(
@@ -291,7 +290,6 @@ struct MenuBarExtraLabelView: View {
 #Preview {
   MenuBarExtraView(
     bridgeClient: BridgeClient(),
-    appStateStore: AppStateStore(),
-    runtimeEventCoordinator: RuntimeEventCoordinator()
+    appStateStore: AppStateStore()
   )
 }

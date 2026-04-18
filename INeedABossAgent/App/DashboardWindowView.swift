@@ -307,13 +307,6 @@ struct DashboardWindowView: View {
       }
     }
     .frame(minWidth: 760, minHeight: 860)
-    .task {
-      bridgeClient.connect()
-      launchAtLogin.refresh()
-    }
-    .onReceive(bridgeClient.$latestState) { latestState in
-      appStateStore.apply(latestState)
-    }
   }
 
   private var settingsSection: some View {

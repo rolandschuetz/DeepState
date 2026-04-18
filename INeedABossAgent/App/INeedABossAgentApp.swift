@@ -11,8 +11,7 @@ struct INeedABossAgentApp: App {
     MenuBarExtra {
       MenuBarExtraView(
         bridgeClient: bridgeClient,
-        appStateStore: appStateStore,
-        runtimeEventCoordinator: runtimeEventCoordinator
+        appStateStore: appStateStore
       )
       .task {
         bridgeClient.connect()
@@ -44,22 +43,6 @@ struct INeedABossAgentApp: App {
         bridgeClient: bridgeClient,
         appStateStore: appStateStore
       )
-      .task {
-        bridgeClient.connect()
-        runtimeEventCoordinator.configure(bridgeClient: bridgeClient)
-        await runtimeEventCoordinator.start()
-      }
-      .onReceive(bridgeClient.$latestState) { latestState in
-        appStateStore.apply(latestState)
-        runtimeEventCoordinator.handle(systemState: latestState)
-      }
-      .onReceive(
-        NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
-      ) { _ in
-        Task {
-          await runtimeEventCoordinator.refreshNotificationPermission()
-        }
-      }
     }
     .windowResizability(.contentMinSize)
   }
