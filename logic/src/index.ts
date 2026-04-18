@@ -40,6 +40,17 @@ export {
   withMigrationLock,
 } from "./db/migrations.js";
 
+export {
+  isSqliteBusyError,
+  runWalCheckpoint,
+  withSqliteBusyRetry,
+} from "./db/maintenance.js";
+
+export type {
+  WalCheckpointMode,
+  WalCheckpointResult,
+} from "./db/maintenance.js";
+
 export type {
   AppliedMigration,
   SqliteMigration,
