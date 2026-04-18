@@ -110,6 +110,68 @@ final class BridgeClientTests: XCTestCase {
     XCTAssertEqual(client.lastErrorDescription, TestError.transportFailed.localizedDescription)
   }
 
+  func testDispatchCommandPostsPauseFixturePayload() async throws {
+    let commandTransport = MockCommandRequestTransport(
+      statusCode: 202,
+      responseJSON:
+        #"{"correlation_id":"corr_1","command_id":"c7942526-57a3-4ccb-a4da-2480b496759c","kind":"pause","message":"Command accepted.","status":"success"}"#
+    )
+    let client = BridgeClient(
+      configuration: makeConfiguration(),
+      transport: MockEventStreamTransport(),
+      commandTransport: commandTransport
+    )
+
+    let result = try await client.dispatchCommand(
+      PauseCommandPayload(
+        reason: .userPause,
+        durationSeconds: 600,
+        note: "Taking a break"
+      ),
+      commandId: "c7942526-57a3-4ccb-a4da-2480b496759c",
+      sentAt: "2026-04-18T09:00:00Z"
+    )
+
+    XCTAssertEqual(result.status, .success)
+    XCTAssertEqual(commandTransport.requests.count, 1)
+    XCTAssertEqual(commandTransport.requests.first?.httpMethod, "POST")
+    XCTAssertEqual(
+      commandTransport.requests.first?.value(forHTTPHeaderField: "Content-Type"),
+      "application/json"
+    )
+
+    let fixture = try commandFixtureData(named: "pause.json")
+    XCTAssertEqual(
+      try normalizedJSONString(from: commandTransport.requestBodies[0]),
+      try normalizedJSONString(from: fixture)
+    )
+  }
+
+  func testDispatchCommandDecodesValidationFailures() async throws {
+    let client = BridgeClient(
+      configuration: makeConfiguration(),
+      transport: MockEventStreamTransport(),
+      commandTransport: MockCommandRequestTransport(
+        statusCode: 400,
+        responseJSON:
+          #"{"correlation_id":"corr_2","command_id":null,"message":"Command payload failed validation.","issues":["payload.raw_text: Required"],"status":"validation_error"}"#
+      )
+    )
+
+    let result = try await client.dispatchCommand(
+      ImportCoachingExchangeCommandPayload(
+        source: .manualPaste,
+        rawText: "{}"
+      ),
+      commandId: "8f0c0737-5ea7-4dd2-9a26-2ef6b281a6fa",
+      sentAt: "2026-04-18T09:05:00Z"
+    )
+
+    XCTAssertEqual(result.status, .validationError)
+    XCTAssertNil(result.commandId)
+    XCTAssertEqual(result.issues, ["payload.raw_text: Required"])
+  }
+
   private func makeConfiguration() -> BridgeConfiguration {
     BridgeConfiguration(
       baseURL: URL(string: "http://127.0.0.1:8787")!,
@@ -133,6 +195,23 @@ final class BridgeClientTests: XCTestCase {
     }
 
     return fixture
+  }
+
+  private func commandFixtureData(named filename: String) throws -> Data {
+    try Data(
+      contentsOf:
+        repositoryRootURL
+        .appendingPathComponent("fixtures")
+        .appendingPathComponent("contracts")
+        .appendingPathComponent("commands")
+        .appendingPathComponent(filename)
+    )
+  }
+
+  private func normalizedJSONString(from data: Data) throws -> String {
+    let object = try JSONSerialization.jsonObject(with: data)
+    let normalized = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+    return try XCTUnwrap(String(data: normalized, encoding: .utf8))
   }
 
   private var repositoryRootURL: URL {
@@ -190,5 +269,35 @@ private final class MockEventStreamTransport: EventStreamTransport {
 
       continuation.finish()
     }
+  }
+}
+
+private final class MockCommandRequestTransport: CommandRequestTransport {
+  private let responseData: Data
+  private let statusCode: Int
+
+  private(set) var requestBodies: [Data] = []
+  private(set) var requests: [URLRequest] = []
+
+  init(statusCode: Int, responseJSON: String) {
+    self.responseData = Data(responseJSON.utf8)
+    self.statusCode = statusCode
+  }
+
+  func perform(
+    request: URLRequest,
+    body: Data
+  ) async throws -> (Data, HTTPURLResponse) {
+    requests.append(request)
+    requestBodies.append(body)
+
+    let response = HTTPURLResponse(
+      url: try XCTUnwrap(request.url),
+      statusCode: statusCode,
+      httpVersion: nil,
+      headerFields: ["Content-Type": "application/json"]
+    )
+
+    return (responseData, try XCTUnwrap(response))
   }
 }

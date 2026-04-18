@@ -178,6 +178,14 @@ protocol EventStreamTransport {
   func streamEvents(for request: URLRequest) -> AsyncThrowingStream<ServerSentEvent, Error>
 }
 
+@MainActor
+protocol CommandRequestTransport {
+  func perform(
+    request: URLRequest,
+    body: Data
+  ) async throws -> (Data, HTTPURLResponse)
+}
+
 struct URLSessionEventStreamTransport: EventStreamTransport {
   let session: URLSession
 
@@ -222,6 +230,227 @@ struct URLSessionEventStreamTransport: EventStreamTransport {
   }
 }
 
+struct URLSessionCommandRequestTransport: CommandRequestTransport {
+  let session: URLSession
+
+  init(session: URLSession = .shared) {
+    self.session = session
+  }
+
+  func perform(
+    request: URLRequest,
+    body: Data
+  ) async throws -> (Data, HTTPURLResponse) {
+    var request = request
+    request.httpBody = body
+
+    let (data, response) = try await session.data(for: request)
+    guard let httpResponse = response as? HTTPURLResponse else {
+      throw BridgeError.invalidResponse
+    }
+
+    return (data, httpResponse)
+  }
+}
+
+enum CommandKind: String, Codable, Equatable {
+  case pause
+  case resume
+  case updateExclusions = "update_exclusions"
+  case resolveAmbiguity = "resolve_ambiguity"
+  case importCoachingExchange = "import_coaching_exchange"
+  case notificationAction = "notification_action"
+  case reportNotificationPermission = "report_notification_permission"
+  case purgeAll = "purge_all"
+}
+
+protocol BridgeCommandPayload: Encodable {
+  static var kind: CommandKind { get }
+}
+
+struct PauseCommandPayload: Codable, Equatable, BridgeCommandPayload {
+  static let kind: CommandKind = .pause
+
+  enum Reason: String, Codable, Equatable {
+    case userPause = "user_pause"
+    case `break`
+    case snooze
+    case intentionalDetour = "intentional_detour"
+  }
+
+  let reason: Reason
+  let durationSeconds: Int?
+  let note: String?
+}
+
+struct ResumeCommandPayload: Codable, Equatable, BridgeCommandPayload {
+  static let kind: CommandKind = .resume
+
+  enum Reason: String, Codable, Equatable {
+    case userResume = "user_resume"
+    case notificationReturn = "notification_return"
+    case pauseElapsed = "pause_elapsed"
+  }
+
+  let reason: Reason
+}
+
+struct UpdateExclusionsCommandPayload: Codable, Equatable, BridgeCommandPayload {
+  static let kind: CommandKind = .updateExclusions
+
+  enum Operation: Codable, Equatable {
+    case upsert(PrivacyExclusionEntry)
+    case remove(exclusionId: String)
+
+    private enum CodingKeys: String, CodingKey {
+      case entry
+      case exclusionId
+      case op
+    }
+
+    private enum OperationKind: String, Codable {
+      case upsert
+      case remove
+    }
+
+    init(from decoder: Decoder) throws {
+      let container = try decoder.container(keyedBy: CodingKeys.self)
+      let operationKind = try container.decode(OperationKind.self, forKey: .op)
+
+      switch operationKind {
+      case .upsert:
+        self = .upsert(try container.decode(PrivacyExclusionEntry.self, forKey: .entry))
+      case .remove:
+        self = .remove(
+          exclusionId: try container.decode(String.self, forKey: .exclusionId)
+        )
+      }
+    }
+
+    func encode(to encoder: Encoder) throws {
+      var container = encoder.container(keyedBy: CodingKeys.self)
+
+      switch self {
+      case .upsert(let entry):
+        try container.encode(OperationKind.upsert, forKey: .op)
+        try container.encode(entry, forKey: .entry)
+      case .remove(let exclusionId):
+        try container.encode(OperationKind.remove, forKey: .op)
+        try container.encode(exclusionId, forKey: .exclusionId)
+      }
+    }
+  }
+
+  let operations: [Operation]
+}
+
+struct ResolveAmbiguityCommandPayload: Codable, Equatable, BridgeCommandPayload {
+  static let kind: CommandKind = .resolveAmbiguity
+
+  enum RememberChoice: String, Codable, Equatable {
+    case doNotRemember = "do_not_remember"
+    case rememberAsTask = "remember_as_task"
+    case rememberAsWorkGroup = "remember_as_work_group"
+  }
+
+  let clarificationId: String
+  let answerId: String
+  let rememberChoice: RememberChoice
+  let userNote: String?
+}
+
+struct ImportCoachingExchangeCommandPayload: Codable, Equatable, BridgeCommandPayload {
+  static let kind: CommandKind = .importCoachingExchange
+
+  enum Source: String, Codable, Equatable {
+    case manualPaste = "manual_paste"
+    case clipboard
+  }
+
+  let source: Source
+  let rawText: String
+}
+
+struct NotificationActionCommandPayload: Codable, Equatable, BridgeCommandPayload {
+  static let kind: CommandKind = .notificationAction
+
+  let interventionId: String
+  let actionId: String
+}
+
+struct ReportNotificationPermissionCommandPayload: Codable, Equatable, BridgeCommandPayload {
+  static let kind: CommandKind = .reportNotificationPermission
+
+  let osPermission: NotificationPermissionStatus
+}
+
+struct PurgeAllCommandPayload: Codable, Equatable, BridgeCommandPayload {
+  static let kind: CommandKind = .purgeAll
+
+  let confirmPhrase: String
+}
+
+struct CommandEnvelope<Payload: BridgeCommandPayload>: Encodable {
+  let schemaVersion: SchemaVersion
+  let commandId: String
+  let sentAt: String
+  let payload: Payload
+
+  init(
+    schemaVersion: SchemaVersion = "1.0.0",
+    commandId: String,
+    sentAt: String,
+    payload: Payload
+  ) {
+    self.schemaVersion = schemaVersion
+    self.commandId = commandId
+    self.sentAt = sentAt
+    self.payload = payload
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case commandId
+    case kind
+    case payload
+    case schemaVersion
+    case sentAt
+  }
+
+  func encode(to encoder: Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encode(commandId, forKey: .commandId)
+    try container.encode(Payload.kind, forKey: .kind)
+    try container.encode(payload, forKey: .payload)
+    try container.encode(schemaVersion, forKey: .schemaVersion)
+    try container.encode(sentAt, forKey: .sentAt)
+  }
+}
+
+enum CommandActionStatus: String, Codable, Equatable {
+  case success
+  case validationError = "validation_error"
+  case retryableFailure = "retryable_failure"
+  case fatalFailure = "fatal_failure"
+}
+
+struct CommandActionResult: Codable, Equatable {
+  let correlationId: String
+  let commandId: String?
+  let kind: CommandKind?
+  let message: String
+  let issues: [String]?
+  let status: CommandActionStatus
+}
+
+enum BridgeClock {
+  static func isoTimestamp(date: Date = Date()) -> String {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime]
+    formatter.timeZone = TimeZone(secondsFromGMT: 0)
+    return formatter.string(from: date)
+  }
+}
+
 @MainActor
 final class BridgeClient: ObservableObject {
   enum ConnectionState: Equatable {
@@ -241,14 +470,17 @@ final class BridgeClient: ObservableObject {
   let configuration: BridgeConfiguration
 
   private let transport: EventStreamTransport
+  private let commandTransport: CommandRequestTransport
   private var streamTask: Task<Void, Never>?
 
   init(
     configuration: BridgeConfiguration = (try? .fromProcessEnvironment()) ?? .fallback,
-    transport: EventStreamTransport = URLSessionEventStreamTransport()
+    transport: EventStreamTransport = URLSessionEventStreamTransport(),
+    commandTransport: CommandRequestTransport = URLSessionCommandRequestTransport()
   ) {
     self.configuration = configuration
     self.transport = transport
+    self.commandTransport = commandTransport
   }
 
   deinit {
@@ -300,6 +532,37 @@ final class BridgeClient: ObservableObject {
     streamTask?.cancel()
     streamTask = nil
     connectionState = .idle
+  }
+
+  func dispatchCommand<Payload: BridgeCommandPayload>(
+    _ payload: Payload,
+    commandId: String = UUID().uuidString,
+    sentAt: String = BridgeClock.isoTimestamp()
+  ) async throws -> CommandActionResult {
+    let envelope = CommandEnvelope(
+      commandId: commandId,
+      sentAt: sentAt,
+      payload: payload
+    )
+    let body = try BridgeJSONCoding.encoder.encode(envelope)
+
+    var request = URLRequest(url: configuration.commandURL)
+    request.cachePolicy = .reloadIgnoringLocalCacheData
+    request.httpMethod = "POST"
+    request.timeoutInterval = configuration.requestTimeoutSeconds
+    request.setValue("application/json", forHTTPHeaderField: "Accept")
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+    let (data, response) = try await commandTransport.perform(
+      request: request,
+      body: body
+    )
+
+    guard (200..<600).contains(response.statusCode) else {
+      throw BridgeError.unexpectedStatusCode(response.statusCode)
+    }
+
+    return try BridgeJSONCoding.decoder.decode(CommandActionResult.self, from: data)
   }
 
   private func handle(event: ServerSentEvent) throws {
