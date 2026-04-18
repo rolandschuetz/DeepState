@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  createDiagnosticsLogSink,
   applyScreenpipeHealthToSystemState,
   createDefaultSystemState,
+  createModuleLogger,
   createScreenpipeClient,
+  DiagnosticsLogStore,
 } from "../src/index.js";
 
 describe("createScreenpipeClient", () => {
@@ -63,6 +66,99 @@ describe("createScreenpipeClient", () => {
       message: "Screenpipe health probe failed.",
       status: "down",
       url: "http://127.0.0.1:3030/health",
+    });
+  });
+
+  it("detects startup capabilities and records them in diagnostics", async () => {
+    const fetchImpl = vi.fn<typeof fetch>((input) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
+
+      if (url.endsWith("/health")) {
+        return Promise.resolve(new Response(JSON.stringify({
+          status: "ok",
+          version: "0.5.0",
+        }), {
+          headers: {
+            "content-type": "application/json",
+          },
+          status: 200,
+        }));
+      }
+
+      if (url.endsWith("/elements?limit=1")) {
+        return Promise.resolve(new Response(JSON.stringify({
+          data: [{ id: "element_1" }],
+        }), {
+          headers: {
+            "content-type": "application/json",
+          },
+          status: 200,
+        }));
+      }
+
+      if (url.endsWith("/search?limit=1")) {
+        return Promise.resolve(new Response(JSON.stringify({
+          data: [{
+            audio_transcript: "Weekly sync transcript",
+            frame_id: 44,
+          }],
+        }), {
+          headers: {
+            "content-type": "application/json",
+          },
+          status: 200,
+        }));
+      }
+
+      if (url.endsWith("/frames/44/context")) {
+        return Promise.resolve(new Response(JSON.stringify({
+          frame_id: 44,
+          context: "Checkout design",
+        }), {
+          headers: {
+            "content-type": "application/json",
+          },
+          status: 200,
+        }));
+      }
+
+      return Promise.reject(new Error(`Unexpected URL: ${url}`));
+    });
+    const diagnosticsStore = new DiagnosticsLogStore();
+    const diagnosticsLogger = createModuleLogger({
+      minLevel: "info",
+      module: "screenpipe",
+      sink: createDiagnosticsLogSink(diagnosticsStore),
+    });
+    const client = createScreenpipeClient({
+      baseUrl: "http://127.0.0.1:3030",
+      fetch: fetchImpl,
+      healthTimeoutMs: 5_000,
+    });
+
+    const capabilities = await client.detectCapabilities(
+      "2026-04-18T10:00:00Z",
+      diagnosticsLogger,
+    );
+
+    expect(capabilities).toEqual({
+      audioTranscriptsAvailable: true,
+      checkedAt: "2026-04-18T10:00:00Z",
+      elementsEndpointAvailable: true,
+      frameContextEndpointAvailable: true,
+      sampleFrameId: 44,
+      searchEndpointAvailable: true,
+      version: "0.5.0",
+    });
+    expect(diagnosticsStore.list("screenpipe")[0]).toMatchObject({
+      level: "info",
+      message: "Detected Screenpipe startup capabilities.",
+      module: "screenpipe",
     });
   });
 });

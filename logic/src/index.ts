@@ -18,6 +18,7 @@ export {
 
 export type {
   ScreenpipeClient,
+  ScreenpipeCapabilities,
   ScreenpipeHealthProbe,
 } from "./screenpipe/client.js";
 
