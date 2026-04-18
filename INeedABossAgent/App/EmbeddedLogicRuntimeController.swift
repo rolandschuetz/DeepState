@@ -38,13 +38,9 @@ final class EmbeddedLogicRuntimeController {
       process.executableURL = executableURL
       process.environment = runtimeEnvironment()
       process.terminationHandler = { terminatedProcess in
-        Task { @MainActor [weak self] in
-          self?.launchQueue.async {
-            if self?.process === terminatedProcess {
-              self?.process = nil
-            }
-          }
-        }
+        NSLog(
+          "Embedded logic runtime exited with status \(terminatedProcess.terminationStatus)."
+        )
       }
 
       do {
