@@ -38,6 +38,17 @@ const DEFAULT_INITIAL_LOOKBACK_MS = 5 * 60 * 1000;
 const DEFAULT_LIMIT = 250;
 const DEFAULT_OVERLAP_MS = 15 * 1000;
 const DEFAULT_RECENT_KEY_CAPACITY = 1_000;
+const TIMESTAMP_KEYS = new Set([
+  "timestamp",
+  "observed_at",
+  "observedAt",
+  "created_at",
+  "createdAt",
+  "start_at",
+  "startAt",
+  "end_at",
+  "endAt",
+]);
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -89,6 +100,30 @@ const findTimestamp = (record: unknown): string | null => {
   }
 
   return null;
+};
+
+export const normalizeScreenpipeRecordTimestamps = (record: unknown): unknown => {
+  if (Array.isArray(record)) {
+    return record.map((entry) => normalizeScreenpipeRecordTimestamps(entry));
+  }
+
+  if (!isPlainObject(record)) {
+    return record;
+  }
+
+  return Object.fromEntries(
+    Object.entries(record).map(([key, value]) => {
+      if (
+        TIMESTAMP_KEYS.has(key) &&
+        typeof value === "string" &&
+        !Number.isNaN(Date.parse(value))
+      ) {
+        return [key, new Date(value).toISOString()] as const;
+      }
+
+      return [key, normalizeScreenpipeRecordTimestamps(value)] as const;
+    }),
+  );
 };
 
 const buildRecordKey = (record: unknown): string => {
@@ -145,7 +180,9 @@ export const createScreenpipeSearchPoller = ({
       }
 
       const payload = await parseResponsePayload(response);
-      const rawRecords = extractSearchRecords(payload);
+      const rawRecords = extractSearchRecords(payload).map((record) =>
+        normalizeScreenpipeRecordTimestamps(record),
+      );
       const seenKeys = new Set(cursor.recentRecordKeys);
       const nextRecords: unknown[] = [];
       let deduplicatedCount = 0;
@@ -164,6 +201,13 @@ export const createScreenpipeSearchPoller = ({
 
         if (seenKeys.has(recordKey)) {
           deduplicatedCount += 1;
+          continue;
+        }
+
+        if (
+          recordTimestamp !== null &&
+          (recordTimestamp < startAt || recordTimestamp > endAt)
+        ) {
           continue;
         }
 

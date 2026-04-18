@@ -1,6 +1,27 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createScreenpipeSearchPoller } from "../src/index.js";
+import {
+  createScreenpipeSearchPoller,
+  normalizeScreenpipeRecordTimestamps,
+} from "../src/index.js";
+
+describe("normalizeScreenpipeRecordTimestamps", () => {
+  it("normalizes known timestamp fields to UTC recursively", () => {
+    expect(
+      normalizeScreenpipeRecordTimestamps({
+        created_at: "2026-04-18T12:00:00+02:00",
+        nested: {
+          endAt: "2026-04-18T11:45:00+02:00",
+        },
+      }),
+    ).toEqual({
+      created_at: "2026-04-18T10:00:00.000Z",
+      nested: {
+        endAt: "2026-04-18T09:45:00.000Z",
+      },
+    });
+  });
+});
 
 describe("createScreenpipeSearchPoller", () => {
   it("polls /search with the initial lookback window", async () => {
@@ -87,12 +108,55 @@ describe("createScreenpipeSearchPoller", () => {
     expect(result.records).toEqual([
       {
         id: "event_2",
-        timestamp: "2026-04-18T10:00:20Z",
+        timestamp: "2026-04-18T10:00:20.000Z",
       },
     ]);
     expect(result.cursor).toEqual({
       lastSuccessfulIngestAt: "2026-04-18T10:00:20.000Z",
       recentRecordKeys: ["id:event_1", "id:event_2"],
     });
+  });
+
+  it("drops records outside the requested lookback window after UTC normalization", async () => {
+    const fetchImpl = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response(JSON.stringify({
+        data: [
+          {
+            id: "event_old",
+            timestamp: "2026-04-18T09:58:59Z",
+          },
+          {
+            id: "event_keep",
+            timestamp: "2026-04-18T12:00:05+02:00",
+          },
+          {
+            id: "event_future",
+            timestamp: "2026-04-18T10:01:01Z",
+          },
+        ],
+      }), {
+        headers: {
+          "content-type": "application/json",
+        },
+        status: 200,
+      }))
+    );
+    const poller = createScreenpipeSearchPoller({
+      baseUrl: "http://127.0.0.1:3030",
+      fetch: fetchImpl,
+      initialLookbackMs: 60_000,
+    });
+
+    const result = await poller.poll({
+      endAt: "2026-04-18T10:01:00Z",
+    });
+
+    expect(result.records).toEqual([
+      {
+        id: "event_keep",
+        timestamp: "2026-04-18T10:00:05.000Z",
+      },
+    ]);
+    expect(result.cursor.lastSuccessfulIngestAt).toBe("2026-04-18T10:01:01.000Z");
   });
 });

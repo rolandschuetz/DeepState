@@ -43,7 +43,7 @@ By architecting the software with a strict boundary—**the headless TypeScript 
 - [x] Implement Screenpipe HTTP client with a `/health` probe and degraded-mode detection (sets `mode = "degraded_screenpipe"`).
 - [x] Detect Screenpipe capabilities at startup (`/elements`, `/frames/{id}/context`, audio transcript availability, exposed version if present) and record them in diagnostics.
 - [x] Implement Screenpipe `/search` polling adapter with overlap and deduplication.
-- [ ] Track the last successful ingest timestamp, normalize all inbound timestamps to UTC, and ignore windows outside the retention/lookback policy.
+- [x] Track the last successful ingest timestamp, normalize all inbound timestamps to UTC, and ignore windows outside the retention/lookback policy.
 - [ ] Implement `EvidenceNormalizer` to map raw Screenpipe records into an app-owned evidence schema.
 - [ ] Canonicalize app identifiers, sanitize window titles, normalize URLs into host/path tokens, summarize input activity, and attach Screenpipe refs for explainability drill-down.
 - [ ] Implement `PrivacyFilter` so excluded apps/domains are completely dropped before logic checks; only minimal audit counters may remain.
