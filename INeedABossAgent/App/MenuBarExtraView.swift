@@ -171,6 +171,7 @@ struct MenuBarExtraView: View {
 
   @ObservedObject var bridgeClient: BridgeClient
   @ObservedObject var appStateStore: AppStateStore
+  @State private var lastAutoOpenedRuntimeSessionId: String?
 
   var body: some View {
     let dropdownContent = MenuBarExtraPresenter.dropdownContent(
@@ -207,6 +208,7 @@ struct MenuBarExtraView: View {
       }
 
       Button("Open Dashboard") {
+        NSApp.activate(ignoringOtherApps: true)
         openWindow(id: DashboardWindowRoute.id)
       }
       .font(.caption)
@@ -261,6 +263,24 @@ struct MenuBarExtraView: View {
     }
     .padding(16)
     .frame(width: 320)
+    .onReceive(bridgeClient.$latestState) { latestState in
+      guard let latestState else {
+        lastAutoOpenedRuntimeSessionId = nil
+        return
+      }
+
+      guard latestState.mode == .noPlan else {
+        return
+      }
+
+      guard lastAutoOpenedRuntimeSessionId != latestState.runtimeSessionId else {
+        return
+      }
+
+      lastAutoOpenedRuntimeSessionId = latestState.runtimeSessionId
+      NSApp.activate(ignoringOtherApps: true)
+      openWindow(id: DashboardWindowRoute.id)
+    }
   }
 }
 
@@ -282,6 +302,7 @@ struct MenuBarExtraLabelView: View {
       .foregroundStyle(content.tintColor)
       .accessibilityLabel(content.accessibilityLabel)
       .onChange(of: runtimeEventCoordinator.dashboardOpenRequestID) {
+        NSApp.activate(ignoringOtherApps: true)
         openWindow(id: DashboardWindowRoute.id)
       }
   }
