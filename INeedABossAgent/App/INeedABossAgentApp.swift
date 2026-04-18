@@ -3,7 +3,9 @@ import SwiftUI
 @main
 struct INeedABossAgentApp: App {
   @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-  @StateObject private var bridgeClient = BridgeClient()
+  @StateObject private var bridgeClient = BridgeClient(
+    configuration: EmbeddedLogicRuntimeController.shared.bridgeConfiguration
+  )
   @StateObject private var appStateStore = AppStateStore()
   @StateObject private var runtimeEventCoordinator = RuntimeEventCoordinator()
 

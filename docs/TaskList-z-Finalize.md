@@ -6,20 +6,20 @@ By architecting the software with a strict boundary—**the headless TypeScript 
 *(Complete this only after Slices 1-5 work end to end locally. This merges the Logic application and native Swift wrapper tightly into a single redistributable unit.)*
 
 **Cross-Cutting Quality Test Actions**
-- [ ] Compatibility tests: verify macOS JSON deserializers exactly match TS payloads without schema drift breakages.
-- [ ] Replay test traces: Mock JSON streams mapping entirely through all 5 machine states utilizing mock 2-tick intervals. 
-- [ ] Paste Sanitizer E2E Check: Explicitly feed raw, aggressively-formatted GPT outputs complete with verbose intro greetings, smart quotes, and code blocks into the macOS fields. Confirm Swift properly cleans and the TS regex passes validation cleanly.
-- [ ] UX Alignment checks: Enforce that every possible generated notification adheres natively to the TS `messages.ts` text prefix logic (`Check.` / `Locked.` / `Reset.` / `Back.`).
-- [ ] Repository tests: verify migration rollback, retention pruning, purge correctness, and bounded busy-retry behavior.
-- [ ] Screenpipe adapter tests: verify `/search` parsing, missing-field tolerance, dedupe behavior, exclusion filtering, and frame-context enrichment.
-- [ ] Privacy/safety tests: ensure excluded evidence is never persisted in coach DB and confirm no normal runtime or purge action mutates Screenpipe-owned data.
-- [ ] UI reconnect/preview tests: cover no-plan, hard-drift, praise, paused, degraded Screenpipe, and reconnect-after-restart states.
+- [x] Compatibility tests: verify macOS JSON deserializers exactly match TS payloads without schema drift breakages.
+- [x] Replay test traces: Mock JSON streams mapping entirely through all 5 machine states utilizing mock 2-tick intervals. 
+- [x] Paste Sanitizer E2E Check: Explicitly feed raw, aggressively-formatted GPT outputs complete with verbose intro greetings, smart quotes, and code blocks into the macOS fields. Confirm Swift properly cleans and the TS regex passes validation cleanly.
+- [x] UX Alignment checks: Enforce that every possible generated notification adheres natively to the TS `messages.ts` text prefix logic (`Check.` / `Locked.` / `Reset.` / `Back.`).
+- [x] Repository tests: verify migration rollback, retention pruning, purge correctness, and bounded busy-retry behavior.
+- [x] Screenpipe adapter tests: verify `/search` parsing, missing-field tolerance, dedupe behavior, exclusion filtering, and frame-context enrichment.
+- [x] Privacy/safety tests: ensure excluded evidence is never persisted in coach DB and confirm no normal runtime or purge action mutates Screenpipe-owned data.
+- [x] UI reconnect/preview tests: cover no-plan, hard-drift, praise, paused, degraded Screenpipe, and reconnect-after-restart states.
 
 **Integration, Packing, & Release Pipeline**
-- [ ] Package the Node logic environment cleanly using `esbuild` paired natively with `Node SEA` (Single Executable Application wrapper) compiling to a single file.
-- [ ] Embed the generated Node binary resource cleanly inside the Xcode Swift App resources root context. 
-- [ ] Structure the macOS Application wrapper lifecycle (`AppDelegate`/`App`) to fire an external process spinning up the embedded TS binary immediately on load. Ensure gracefully triggered `SIGTERM`/`SIGKILL` traps immediately collapse the logic binary explicitly on App termination events. 
-- [ ] Pass a dynamic local system port flag dynamically from Swift natively down to the TS binary on app-launch to guarantee 0 conflicts against overlapping local host ports. 
+- [x] Package the Node logic environment cleanly using `esbuild` paired natively with `Node SEA` (Single Executable Application wrapper) compiling to a single file.
+- [x] Embed the generated Node binary resource cleanly inside the Xcode Swift App resources root context. 
+- [x] Structure the macOS Application wrapper lifecycle (`AppDelegate`/`App`) to fire an external process spinning up the embedded TS binary immediately on load. Ensure gracefully triggered `SIGTERM`/`SIGKILL` traps immediately collapse the logic binary explicitly on App termination events. 
+- [x] Pass a dynamic local system port flag dynamically from Swift natively down to the TS binary on app-launch to guarantee 0 conflicts against overlapping local host ports. 
 - [ ] Implement first-run permission onboarding for Screen Recording, Accessibility, Notifications, and any optional Screenpipe-related audio permissions that the install depends on.
 - [ ] Handle wake-from-sleep, lock/unlock, user-switch, and crash-restart lifecycle events so the bridge and scheduler recover cleanly.
 - [ ] **E2E Check**: Open App First Run -> Ensure SQLite auto-seeded 1Password / Banking filters natively into DB.

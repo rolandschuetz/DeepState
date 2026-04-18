@@ -35,10 +35,12 @@
 		1E6FC4A1B8D14AC7A3A5102A /* EveningDebriefView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E6FC4A1B8D14AC7A3A5102B /* EveningDebriefView.swift */; };
 		1E6FC4A1B8D14AC7A3A5102C /* EveningDebriefView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E6FC4A1B8D14AC7A3A5102B /* EveningDebriefView.swift */; };
 		1E6FC4A1B8D14AC7A3A5102D /* EveningDebriefViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E6FC4A1B8D14AC7A3A5102E /* EveningDebriefViewTests.swift */; };
+		22C6F3F0D30A420092917FEF /* EmbeddedLogicRuntimeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22C6F3F0D30A420092917FEE /* EmbeddedLogicRuntimeController.swift */; };
 		285C9737580E352F860F9DFC /* SystemState.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8330A7510089CBC13E28D3D /* SystemState.swift */; };
 		29A5526998269E6CB49C916E /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 57BEB135E1BE7F24E9645694 /* Cocoa.framework */; };
 		2B8BED953941CB7267541460 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 57BEB135E1BE7F24E9645694 /* Cocoa.framework */; };
 		42CDE54C4E89FF59CD4DB49E /* INeedABossAgentApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02EAFF09630A2E86451922C7 /* INeedABossAgentApp.swift */; };
+		50663F2E0A814A29BA7B8AA5 /* ReplayPreviewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50663F2E0A814A29BA7B8AA4 /* ReplayPreviewTests.swift */; };
 		609FDB7CEF5786D0630FDC27 /* BootstrapConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B94C57A8AC3E37348D958E3 /* BootstrapConfigurationTests.swift */; };
 		78CFBDF1E74C697CB5536B0D /* BootstrapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 465B2AA333038EBB96306A87 /* BootstrapView.swift */; };
 		9EB292D4DF76E808159C1D14 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C75556CA6FF566442F445E1 /* AppDelegate.swift */; };
@@ -78,6 +80,7 @@
 		1E6FC4A1B8D14AC7A3A51029 /* RuntimeEventCoordinatorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RuntimeEventCoordinatorTests.swift; sourceTree = "<group>"; };
 		1E6FC4A1B8D14AC7A3A5102B /* EveningDebriefView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EveningDebriefView.swift; sourceTree = "<group>"; };
 		1E6FC4A1B8D14AC7A3A5102E /* EveningDebriefViewTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EveningDebriefViewTests.swift; sourceTree = "<group>"; };
+		22C6F3F0D30A420092917FEE /* EmbeddedLogicRuntimeController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EmbeddedLogicRuntimeController.swift; sourceTree = "<group>"; };
 		3B94C57A8AC3E37348D958E3 /* BootstrapConfigurationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BootstrapConfigurationTests.swift; sourceTree = "<group>"; };
 		465B2AA333038EBB96306A87 /* BootstrapView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BootstrapView.swift; sourceTree = "<group>"; };
 		554F840A73FB0BFAE29F6E58 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -86,10 +89,13 @@
 		8ED9D3F235BFF9E12D41663A /* INeedABossAgent.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = INeedABossAgent.entitlements; sourceTree = "<group>"; };
 		93EF7D7DFB427A475BE9B83D /* BridgeClient.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BridgeClient.swift; sourceTree = "<group>"; };
 		9C75556CA6FF566442F445E1 /* AppDelegate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		A1E3A2BC7F1E4B50A4431D10 /* BridgeContractCompatibilityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BridgeContractCompatibilityTests.swift; sourceTree = "<group>"; };
 		A3D9C22BD2E6B1E2D9CB3A48 /* SystemStateDecodingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SystemStateDecodingTests.swift; sourceTree = "<group>"; };
 		A467909EB43D1579277222B8 /* BridgeClientTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BridgeClientTests.swift; sourceTree = "<group>"; };
+		A61D40DE292E43E391F17D0E /* BridgeContractCompatibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1E3A2BC7F1E4B50A4431D10 /* BridgeContractCompatibilityTests.swift */; };
 		C8CEEB2521D636972C5AC10D /* INeedABossAgentTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = INeedABossAgentTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E8330A7510089CBC13E28D3D /* SystemState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SystemState.swift; sourceTree = "<group>"; };
+		50663F2E0A814A29BA7B8AA4 /* ReplayPreviewTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReplayPreviewTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -123,8 +129,10 @@
 				1E6FC4A1B8D14AC7A3A51019 /* MorningFlowViewTests.swift */,
 				1E6FC4A1B8D14AC7A3A51009 /* ModeRouterTests.swift */,
 				1E6FC4A1B8D14AC7A3A51014 /* PasteSanitizerTests.swift */,
+				50663F2E0A814A29BA7B8AA4 /* ReplayPreviewTests.swift */,
 				1E6FC4A1B8D14AC7A3A51029 /* RuntimeEventCoordinatorTests.swift */,
 				3B94C57A8AC3E37348D958E3 /* BootstrapConfigurationTests.swift */,
+				A1E3A2BC7F1E4B50A4431D10 /* BridgeContractCompatibilityTests.swift */,
 				A467909EB43D1579277222B8 /* BridgeClientTests.swift */,
 				A3D9C22BD2E6B1E2D9CB3A48 /* SystemStateDecodingTests.swift */,
 			);
@@ -176,6 +184,7 @@
 				465B2AA333038EBB96306A87 /* BootstrapView.swift */,
 				1E6FC4A1B8D14AC7A3A51021 /* DashboardWindowView.swift */,
 				1E6FC4A1B8D14AC7A3A5100B /* DiagnosticsView.swift */,
+				22C6F3F0D30A420092917FEE /* EmbeddedLogicRuntimeController.swift */,
 				1E6FC4A1B8D14AC7A3A5102B /* EveningDebriefView.swift */,
 				1E6FC4A1B8D14AC7A3A5101B /* MenuBarExtraView.swift */,
 				1E6FC4A1B8D14AC7A3A51016 /* MorningFlowView.swift */,
@@ -236,6 +245,7 @@
 			buildPhases = (
 				2903495333770D24BD5F4F8D /* Sources */,
 				193FA8DC6006D8023CAA66B0 /* Frameworks */,
+				7BB388621E08464CA925A4A3 /* Embed Logic Runtime */,
 				ABAC943DF8CE6DF3AF65E869 /* Resources */,
 			);
 			buildRules = (
@@ -294,6 +304,28 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		7BB388621E08464CA925A4A3 /* Embed Logic Runtime */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Embed Logic Runtime";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/LogicRuntime/INeedABossAgentLogic",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\ncd \"$PROJECT_DIR/logic\"\nnpm run build:sea\nmkdir -p \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/LogicRuntime\"\ncp \"$PROJECT_DIR/logic/dist/INeedABossAgentLogic\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/LogicRuntime/INeedABossAgentLogic\"\nchmod +x \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/LogicRuntime/INeedABossAgentLogic\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		2903495333770D24BD5F4F8D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -303,6 +335,7 @@
 				1E6FC4A1B8D14AC7A3A51001 /* AppStateStore.swift in Sources */,
 				117AA5866BAF45193686AB94 /* BridgeClient.swift in Sources */,
 				9EB292D4DF76E808159C1D14 /* AppDelegate.swift in Sources */,
+				22C6F3F0D30A420092917FEF /* EmbeddedLogicRuntimeController.swift in Sources */,
 				78CFBDF1E74C697CB5536B0D /* BootstrapView.swift in Sources */,
 				1E6FC4A1B8D14AC7A3A51020 /* DashboardWindowView.swift in Sources */,
 				1E6FC4A1B8D14AC7A3A5100A /* DiagnosticsView.swift in Sources */,
@@ -334,11 +367,13 @@
 				1E6FC4A1B8D14AC7A3A51008 /* ModeRouterTests.swift in Sources */,
 				1E6FC4A1B8D14AC7A3A51017 /* MorningFlowView.swift in Sources */,
 				1E6FC4A1B8D14AC7A3A51013 /* PasteSanitizerTests.swift in Sources */,
+				50663F2E0A814A29BA7B8AA5 /* ReplayPreviewTests.swift in Sources */,
 				1E6FC4A1B8D14AC7A3A51007 /* ModeRouterView.swift in Sources */,
 				1E6FC4A1B8D14AC7A3A51012 /* PasteSanitizer.swift in Sources */,
 				1E6FC4A1B8D14AC7A3A51028 /* RuntimeEventCoordinatorTests.swift in Sources */,
 				1E6FC4A1B8D14AC7A3A51027 /* RuntimeEventCoordinator.swift in Sources */,
 				609FDB7CEF5786D0630FDC27 /* BootstrapConfigurationTests.swift in Sources */,
+				A61D40DE292E43E391F17D0E /* BridgeContractCompatibilityTests.swift in Sources */,
 				A7CFC21B83ABAA45697A7073 /* BridgeClientTests.swift in Sources */,
 				BBBA6AD44FB8EE0A608430A8 /* BridgeClient.swift in Sources */,
 				D4229AA736EE9CC928CB13FB /* SystemStateDecodingTests.swift in Sources */,

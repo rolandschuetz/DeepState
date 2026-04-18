@@ -7,13 +7,13 @@ export const messages = {
   hardDrift: {
     body: (taskTitle: string | null): string =>
       taskTitle === null
-        ? "You have been away from the planned task for a while. Return when ready."
-        : `You have been away from "${taskTitle}" for a while. Return when ready.`,
+        ? "Check. You have been away from the planned task for a while. Return when ready."
+        : `Check. You have been away from "${taskTitle}" for a while. Return when ready.`,
     title: "Check. Refocus now?",
   },
   milestoneCandidate: {
     body: (taskTitle: string, hint: string): string =>
-      `Possible milestone on "${taskTitle}": ${hint}`,
+      `Locked. Possible milestone on "${taskTitle}": ${hint}`,
     title: "Locked. Milestone detected?",
   },
   recoveryAnchor: {
