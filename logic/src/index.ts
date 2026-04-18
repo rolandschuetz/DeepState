@@ -9,6 +9,9 @@ export {
 export {
   createPrivacyFilter,
 } from "./privacy/privacy-filter.js";
+export {
+  sanitizeEvidenceForPersistence,
+} from "./privacy/evidence-sanitizer.js";
 
 export {
   createBridgeServer,
@@ -50,6 +53,10 @@ export type {
   PrivacyFilterAudit,
   PrivacyFilterResult,
 } from "./privacy/privacy-filter.js";
+export type {
+  EvidenceSanitizerAudit,
+  EvidenceSanitizerResult,
+} from "./privacy/evidence-sanitizer.js";
 
 export {
   isFeatureFlagEnabled,

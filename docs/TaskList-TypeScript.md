@@ -47,7 +47,7 @@ By architecting the software with a strict boundary—**the headless TypeScript 
 - [x] Implement `EvidenceNormalizer` to map raw Screenpipe records into an app-owned evidence schema.
 - [x] Canonicalize app identifiers, sanitize window titles, normalize URLs into host/path tokens, summarize input activity, and attach Screenpipe refs for explainability drill-down.
 - [x] Implement `PrivacyFilter` so excluded apps/domains are completely dropped before logic checks; only minimal audit counters may remain.
-- [ ] Redact protected text fragments before persistence, drop private/incognito contexts when detectable, and never store excluded evidence in the coach DB.
+- [x] Redact protected text fragments before persistence, drop private/incognito contexts when detectable, and never store excluded evidence in the coach DB.
 - [ ] Implement `ContextAggregator` to roll raw events into contiguous 90s `ContextWindow`s.
 - [ ] Preserve short sequence context around each window (`what came before`, `what followed`, dwell duration) so valid support work is classifiable.
 - [ ] Tag likely meeting contexts from conferencing apps, audio-heavy low-typing periods, and available meeting titles/collaborator hints.
