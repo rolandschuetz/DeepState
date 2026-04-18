@@ -18,7 +18,7 @@ This task list reflects the tightened V1 MVP architecture:
 
 **Phase 0: App Shell & Unified Bridge Client**
 - [x] Initialize macOS SwiftUI app. Remove dock icon and configure standard entitlements.
-- [ ] Define Swift models mapping exactly to the shared JSON `SystemState` schema block, and write test decoders against the TS-generated unit fixtures.
+- [x] Define Swift models mapping exactly to the shared JSON `SystemState` schema block, and write test decoders against the TS-generated unit fixtures.
 - [ ] Implement `BridgeClient` managing a persistent `URLSession` SSE connection (`GET /stream`) mapping directly to app environment variables.
 - [ ] Implement `BridgeClient` single POST dispatcher (`POST /command`) for all outbound data actions.
 - [ ] Request a fresh current snapshot on app open and auto-reconnect after logic-process restarts without applying stale state blindly.
