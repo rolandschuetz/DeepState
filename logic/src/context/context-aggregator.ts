@@ -22,11 +22,24 @@ export type ContextWindowSummary = {
 };
 
 export type AggregatedContextWindow = {
+  dwellDurationSeconds: number;
   endedAt: string;
+  sequenceContext: {
+    next: SequenceNeighborContext | null;
+    previous: SequenceNeighborContext | null;
+  };
   sourceRecordIds: Array<number | string>;
   sourceRecords: NormalizedScreenpipeEvidence[];
   startedAt: string;
   summary: ContextWindowSummary;
+};
+
+export type SequenceNeighborContext = {
+  activeApps: string[];
+  endedAt: string;
+  startedAt: string;
+  urls: string[];
+  windowTitles: string[];
 };
 
 export type CreateContextAggregatorOptions = {
@@ -96,6 +109,16 @@ const summarizeWindow = (
   ),
 });
 
+const summarizeNeighbor = (
+  window: AggregatedContextWindow,
+): SequenceNeighborContext => ({
+  activeApps: window.summary.activeApps,
+  endedAt: window.endedAt,
+  startedAt: window.startedAt,
+  urls: window.summary.urls,
+  windowTitles: window.summary.windowTitles,
+});
+
 export const createContextAggregator = ({
   windowDurationSeconds = DEFAULT_WINDOW_DURATION_SECONDS,
 }: CreateContextAggregatorOptions = {}): ContextAggregator => {
@@ -113,7 +136,12 @@ export const createContextAggregator = ({
 
         if (currentWindow === undefined) {
           windows.push({
+            dwellDurationSeconds: 0,
             endedAt: record.observedAt,
+            sequenceContext: {
+              next: null,
+              previous: null,
+            },
             sourceRecordIds: [...record.screenpipeRefs.recordIds],
             sourceRecords: [record],
             startedAt: record.observedAt,
@@ -129,6 +157,14 @@ export const createContextAggregator = ({
           const nextSourceRecords = [...currentWindow.sourceRecords, record];
 
           currentWindow.endedAt = record.observedAt;
+          currentWindow.dwellDurationSeconds = Math.max(
+            0,
+            Math.round(
+              (Date.parse(currentWindow.endedAt) -
+                Date.parse(currentWindow.startedAt)) /
+                1_000,
+            ),
+          );
           currentWindow.sourceRecords = nextSourceRecords;
           currentWindow.sourceRecordIds = unique(
             nextSourceRecords.flatMap((entry) => entry.screenpipeRefs.recordIds),
@@ -138,12 +174,30 @@ export const createContextAggregator = ({
         }
 
         windows.push({
+          dwellDurationSeconds: 0,
           endedAt: record.observedAt,
+          sequenceContext: {
+            next: null,
+            previous: null,
+          },
           sourceRecordIds: [...record.screenpipeRefs.recordIds],
           sourceRecords: [record],
           startedAt: record.observedAt,
           summary: summarizeWindow([record]),
         });
+      }
+
+      for (const [index, window] of windows.entries()) {
+        window.sequenceContext = {
+          next:
+            index < windows.length - 1
+              ? summarizeNeighbor(windows[index + 1] as AggregatedContextWindow)
+              : null,
+          previous:
+            index > 0
+              ? summarizeNeighbor(windows[index - 1] as AggregatedContextWindow)
+              : null,
+        };
       }
 
       return windows;

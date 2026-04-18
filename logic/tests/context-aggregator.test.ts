@@ -86,8 +86,19 @@ describe("createContextAggregator", () => {
 
     expect(windows).toHaveLength(2);
     expect(windows[0]).toMatchObject({
+      dwellDurationSeconds: 45,
       startedAt: "2026-04-18T09:00:00.000Z",
       endedAt: "2026-04-18T09:00:45.000Z",
+      sequenceContext: {
+        next: {
+          activeApps: ["Slack"],
+          endedAt: "2026-04-18T09:02:10.000Z",
+          startedAt: "2026-04-18T09:02:10.000Z",
+          urls: [],
+          windowTitles: ["Slack | Team"],
+        },
+        previous: null,
+      },
       sourceRecordIds: ["record_1", "record_2"],
       summary: {
         activeApps: ["Cursor"],
@@ -108,8 +119,22 @@ describe("createContextAggregator", () => {
       },
     });
     expect(windows[1]).toMatchObject({
+      dwellDurationSeconds: 0,
       startedAt: "2026-04-18T09:02:10.000Z",
       endedAt: "2026-04-18T09:02:10.000Z",
+      sequenceContext: {
+        next: null,
+        previous: {
+          activeApps: ["Cursor"],
+          endedAt: "2026-04-18T09:00:45.000Z",
+          startedAt: "2026-04-18T09:00:00.000Z",
+          urls: [
+            "https://github.com/openai/repo/pull/1",
+            "https://docs.stripe.com/payments",
+          ],
+          windowTitles: ["repo.ts - INeedABossAgent", "Stripe Docs - Payments"],
+        },
+      },
       sourceRecordIds: ["record_3"],
       summary: {
         activeApps: ["Slack"],

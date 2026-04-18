@@ -49,7 +49,7 @@ By architecting the software with a strict boundary—**the headless TypeScript 
 - [x] Implement `PrivacyFilter` so excluded apps/domains are completely dropped before logic checks; only minimal audit counters may remain.
 - [x] Redact protected text fragments before persistence, drop private/incognito contexts when detectable, and never store excluded evidence in the coach DB.
 - [x] Implement `ContextAggregator` to roll raw events into contiguous 90s `ContextWindow`s.
-- [ ] Preserve short sequence context around each window (`what came before`, `what followed`, dwell duration) so valid support work is classifiable.
+- [x] Preserve short sequence context around each window (`what came before`, `what followed`, dwell duration) so valid support work is classifiable.
 - [ ] Tag likely meeting contexts from conferencing apps, audio-heavy low-typing periods, and available meeting titles/collaborator hints.
 - [ ] Add replay fixtures for normalized evidence to test classification offline.
 - [ ] Handle adapter edge cases explicitly: partial Screenpipe results, missing frame context, overlapping duplicate polls, and slow queries that exceed the scheduler budget.

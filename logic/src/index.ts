@@ -51,6 +51,7 @@ export type {
   AggregatedContextWindow,
   ContextAggregator,
   ContextWindowSummary,
+  SequenceNeighborContext,
 } from "./context/context-aggregator.js";
 
 export type {
