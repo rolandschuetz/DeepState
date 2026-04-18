@@ -20,6 +20,8 @@ import {
 import { createDefaultSystemState } from "../system-state/default-system-state.js";
 
 type BridgeServerOptions = {
+  diagnosticsProbe?: () => Promise<Record<string, unknown>> | Record<string, unknown>;
+  healthProbe?: () => Promise<Record<string, unknown>> | Record<string, unknown>;
   initialState?: SystemState;
   heartbeatIntervalMs?: number;
   handleCommand?: (command: Command) => Promise<void> | void;
@@ -171,23 +173,27 @@ export const createBridgeServer = (
 
     if (method === "GET" && url === "/health") {
       response.writeHead(200, { "Content-Type": "application/json" });
-      response.end(
-        JSON.stringify({
-          status: "ok",
-        }),
-      );
+      const baseHealth = { status: "ok" as const };
+      const extra =
+        options.healthProbe === undefined
+          ? {}
+          : await Promise.resolve(options.healthProbe());
+      response.end(JSON.stringify({ ...baseHealth, ...extra }));
       return;
     }
 
     if (method === "GET" && url === "/diagnostics") {
       response.writeHead(200, { "Content-Type": "application/json" });
-      response.end(
-        JSON.stringify({
-          connected_clients: clients.size,
-          mode: currentState.mode,
-          stream_sequence: currentState.stream_sequence,
-        }),
-      );
+      const baseDiagnostics = {
+        connected_clients: clients.size,
+        mode: currentState.mode,
+        stream_sequence: currentState.stream_sequence,
+      };
+      const extra =
+        options.diagnosticsProbe === undefined
+          ? {}
+          : await Promise.resolve(options.diagnosticsProbe());
+      response.end(JSON.stringify({ ...baseDiagnostics, ...extra }));
       return;
     }
 

@@ -20,6 +20,12 @@ describe("loadRuntimeConfig", () => {
         screenpipeMs: 5_000,
       },
       logLevel: "info",
+      maintenanceEveryNSlowTicks: 10,
+      scheduler: {
+        fastTickMs: 15_000,
+        screenpipeSearchBudgetMs: 12_000,
+        slowTickMs: 90_000,
+      },
       screenpipeBaseUrl: "http://127.0.0.1:3030",
     });
   });
@@ -44,6 +50,12 @@ describe("loadRuntimeConfig", () => {
         screenpipeMs: 4_500,
       },
       logLevel: "debug",
+      maintenanceEveryNSlowTicks: 10,
+      scheduler: {
+        fastTickMs: 15_000,
+        screenpipeSearchBudgetMs: 12_000,
+        slowTickMs: 90_000,
+      },
       screenpipeBaseUrl: "http://localhost:3030",
     });
     expect(isFeatureFlagEnabled(config, "diagnostics")).toBe(true);

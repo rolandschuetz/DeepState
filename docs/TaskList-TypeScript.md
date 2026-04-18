@@ -114,13 +114,13 @@ By architecting the software with a strict boundary—**the headless TypeScript 
 - [x] Generate praise text strictly using `messages.ts` templates (`Locked.` prefix). Cap at max 1 praise per focus block.
 
 **Phase 8: Two-Tick Scheduler, Diagnostics, and Maintenance**
-- [ ] Implement bootstrap order explicitly: load config, open DB, run migrations, load durable memory/preferences, probe Screenpipe, start bridge server, start scheduler, and publish initial state.
-- [ ] Implement the simplified master scheduler:
+- [x] Implement bootstrap order explicitly: load config, open DB, run migrations, load durable memory/preferences, probe Screenpipe, start bridge server, start scheduler, and publish initial state.
+- [x] Implement the simplified master scheduler:
   - **Fast Tick (15s)**: Ingest observations, normalize, apply privacy filters, build raw windows.
   - **Slow Tick (90s)**: Classify state, evaluate progress, govern interventions, and emit payload to `GET /stream`.
-- [ ] Drop the MVP 3-minute progress tick entirely; bundle progress logic directly into the 90s Slow Tick loop.
-- [ ] Add event-driven refresh paths on menu bar open, morning/evening import completion, ambiguity resolution, and unpause so the user is not forced to wait for the next slow tick.
-- [ ] Implement app-wide health checks for Screenpipe, DB, bridge, and optional local-AI availability, and record recovery events when critical dependencies return.
-- [ ] Encode degraded behavior explicitly: Screenpipe failure disables autonomous classification/interventions but keeps plan review/manual actions available; DB busy states keep the last good state in memory and surface warnings.
-- [ ] Implement SQLite compaction scheduling to preserve review/audit data safely for user trust.
-- [ ] Implement `purge_all` command handler to dump app-owned data schemas seamlessly without destroying the underlying Screenpipe local server.
+- [x] Drop the MVP 3-minute progress tick entirely; bundle progress logic directly into the 90s Slow Tick loop.
+- [x] Add event-driven refresh paths on menu bar open, morning/evening import completion, ambiguity resolution, and unpause so the user is not forced to wait for the next slow tick.
+- [x] Implement app-wide health checks for Screenpipe, DB, bridge, and optional local-AI availability, and record recovery events when critical dependencies return.
+- [x] Encode degraded behavior explicitly: Screenpipe failure disables autonomous classification/interventions but keeps plan review/manual actions available; DB busy states keep the last good state in memory and surface warnings.
+- [x] Implement SQLite compaction scheduling to preserve review/audit data safely for user trust.
+- [x] Implement `purge_all` command handler to dump app-owned data schemas seamlessly without destroying the underlying Screenpipe local server.

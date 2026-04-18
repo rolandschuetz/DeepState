@@ -8,8 +8,12 @@ const runtimeConfigEnvSchema = z.object({
   INEEDABOSSAGENT_DB_PATH: z.string().min(1).default(resolve(process.cwd(), "data/logic.sqlite")),
   INEEDABOSSAGENT_FEATURE_FLAGS: z.string().default(""),
   INEEDABOSSAGENT_LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
+  INEEDABOSSAGENT_MAINTENANCE_EVERY_N_SLOW_TICKS: z.coerce.number().int().min(1).default(10),
+  INEEDABOSSAGENT_FAST_TICK_MS: z.coerce.number().int().min(1_000).default(15_000),
   INEEDABOSSAGENT_SCREENPIPE_BASE_URL: z.url().default("http://127.0.0.1:3030"),
   INEEDABOSSAGENT_SCREENPIPE_HEALTH_TIMEOUT_MS: z.coerce.number().int().positive().default(5_000),
+  INEEDABOSSAGENT_SCREENPIPE_SEARCH_BUDGET_MS: z.coerce.number().int().min(1_000).default(12_000),
+  INEEDABOSSAGENT_SLOW_TICK_MS: z.coerce.number().int().min(5_000).default(90_000),
 });
 
 export type RuntimeConfig = {
@@ -21,6 +25,12 @@ export type RuntimeConfig = {
     screenpipeMs: number;
   };
   logLevel: "debug" | "info" | "warn" | "error";
+  maintenanceEveryNSlowTicks: number;
+  scheduler: {
+    fastTickMs: number;
+    slowTickMs: number;
+    screenpipeSearchBudgetMs: number;
+  };
   screenpipeBaseUrl: string;
 };
 
@@ -41,6 +51,12 @@ export const loadRuntimeConfig = (
       screenpipeMs: parsed.INEEDABOSSAGENT_SCREENPIPE_HEALTH_TIMEOUT_MS,
     },
     logLevel: parsed.INEEDABOSSAGENT_LOG_LEVEL,
+    maintenanceEveryNSlowTicks: parsed.INEEDABOSSAGENT_MAINTENANCE_EVERY_N_SLOW_TICKS,
+    scheduler: {
+      fastTickMs: parsed.INEEDABOSSAGENT_FAST_TICK_MS,
+      screenpipeSearchBudgetMs: parsed.INEEDABOSSAGENT_SCREENPIPE_SEARCH_BUDGET_MS,
+      slowTickMs: parsed.INEEDABOSSAGENT_SLOW_TICK_MS,
+    },
     screenpipeBaseUrl: parsed.INEEDABOSSAGENT_SCREENPIPE_BASE_URL.replace(/\/+$/, ""),
   };
 };

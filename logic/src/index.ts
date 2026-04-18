@@ -237,6 +237,43 @@ export {
   isRuntimeEvaluationEnabled,
   runWhenModeIsRunning,
 } from "./runtime/mode-gate.js";
+
+export {
+  createLogicRuntime,
+} from "./runtime/logic-runtime.js";
+export type {
+  LogicRuntime,
+  LogicRuntimeOptions,
+} from "./runtime/logic-runtime.js";
+
+export {
+  createAsyncWorkQueue,
+} from "./runtime/work-queue.js";
+
+export {
+  mergeSchedulerHealth,
+  mergeDatabaseHealthProbe,
+  deriveOverallHealthStatus,
+  recordHealthTransition,
+  recordTransitionIfChanged,
+} from "./runtime/health-recorder.js";
+export type {
+  HealthComponent,
+  HealthTransition,
+} from "./runtime/health-recorder.js";
+
+export {
+  applyResumeToSystemState,
+} from "./runtime/resume-state.js";
+
+export {
+  mergeObserveOnlySettings,
+} from "./runtime/system-health-merge.js";
+
+export {
+  runFastTickIngest,
+  isSchedulerBudgetExceeded,
+} from "./runtime/fast-tick-ingest.js";
 export {
   createInitialPhase5Memory,
   runPhase5SlowTick,
