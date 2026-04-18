@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ineedabossagent/shared-contracts": "file:../shared-contracts"
+    "@ineedabossagent/shared-contracts": "file:../shared-contracts",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

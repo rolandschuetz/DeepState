@@ -3,6 +3,11 @@ export {
 } from "./server/bridge-server.js";
 
 export {
+  isFeatureFlagEnabled,
+  loadRuntimeConfig,
+} from "./config/runtime-config.js";
+
+export {
   isRuntimeEvaluationEnabled,
   runWhenModeIsRunning,
 } from "./runtime/mode-gate.js";

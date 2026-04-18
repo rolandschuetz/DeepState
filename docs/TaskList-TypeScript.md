@@ -20,7 +20,7 @@ By architecting the software with a strict boundary—**the headless TypeScript 
 - [x] Set up HTTP server scaffolding with `GET /stream` (SSE) and `POST /command`. Keep `/health` and `/diagnostics` for internal probes only.
 - [x] Add correlation IDs and typed action result envelopes (`success`, `validation_error`, `retryable_failure`, `fatal_failure`) for async command flows.
 - [x] Create a central mode gate utility so classification, intervention, and progress logic evaluate **only** if `mode === "running"`.
-- [ ] Implement runtime config loading for DB path, Screenpipe base URL, health timeouts, log level, and feature flags.
+- [x] Implement runtime config loading for DB path, Screenpipe base URL, health timeouts, log level, and feature flags.
 - [ ] Add structured module-scoped diagnostics/logging (`scheduler`, `screenpipe`, `classifier`, `intervention`, `import`, `memory`) to support the future debug panel.
 
 **Phase 1: Persistence & Canonical Memory (2 Layers)**
