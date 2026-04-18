@@ -1,4 +1,16 @@
 export {
+  commandSchema,
+  importCoachingExchangeCommandSchema,
+  notificationActionCommandSchema,
+  pauseCommandSchema,
+  purgeAllCommandSchema,
+  reportNotificationPermissionCommandSchema,
+  resolveAmbiguityCommandSchema,
+  resumeCommandSchema,
+  updateExclusionsCommandSchema,
+} from "./bridge/command.js";
+
+export {
   systemStateSchema,
   explainabilityItemSchema,
   privacyExclusionEntrySchema,
@@ -15,6 +27,18 @@ export {
   healthStatusSchema,
   timestampSchema,
 } from "./domain/primitives.js";
+
+export type {
+  Command,
+  ImportCoachingExchangeCommand,
+  NotificationActionCommand,
+  PauseCommand,
+  PurgeAllCommand,
+  ReportNotificationPermissionCommand,
+  ResolveAmbiguityCommand,
+  ResumeCommand,
+  UpdateExclusionsCommand,
+} from "./bridge/command.js";
 
 export type {
   ExplainabilityItem,
