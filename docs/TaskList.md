@@ -1,202 +1,205 @@
-Here is the revised, dependency-aware task list. The main change is that the plan now optimizes for a thin, trustable end-to-end MVP first, then layers on ambiguity learning and richer reinforcement afterward.
+Here is the final, dependency-aware task list, restructured explicitly into the three requested parts. 
 
-Tasks are still broken down into roughly **~30-minute implementation chunks**, but the recommended delivery order is now explicit so the backlog does not drift away from the declared MVP.
+It preserves the checklist formatting and scope of the original architecture while strictly incorporating all the newly requested tightening recommendations (unified single-stream bridge, 2-tick scheduler, 5-state machine simplification, SQLite-only 2-layer memory, JSON-backed explainability, Paste Sanitization, the "Recovery Anchor", centralized messaging, and default privacy/grace periods).
 
 ---
 
 ## Recommended Delivery Order
 
-### Slice 1: Trustworthy App Shell
-- [ ] Shared bridge contracts, schema fixtures, and health states
-- [ ] Booting / disconnected / no-plan / paused UI states
-- [ ] Privacy exclusions and delete-all flow
+**Slice 1: Trustworthy App Shell**
+- Shared bridge contracts (`GET /stream` envelope, `POST /command` discriminator), schema fixtures, health states
+- UI shell responding to global `Mode` states: `booting`, `no_plan`, `running`, `paused`, `degraded_screenpipe`, `logic_error`
+- Default privacy exclusions preset + delete-all flow
 
-### Slice 2: Morning Contract Loop
-- [ ] Morning prompt export
-- [ ] Strict JSON import validation
-- [ ] Stored daily plan and initial dashboard/menu state
+**Slice 2: Morning Contract Loop**
+- Morning prompt export (enforcing strict JSON output from ChatGPT)
+- Swift Paste Sanitizer + TS strict JSON import validation via unified `CoachingExchange` schema
+- Stored daily plan transitioning system mode to `running`
 
-### Slice 3: Passive Focus Tracking
-- [ ] Screenpipe ingest
-- [ ] Context aggregation
-- [ ] Deterministic classification
-- [ ] Menu bar status updates
+**Slice 3: Passive Focus Tracking**
+- Screenpipe ingest on the 15s Fast Tick
+- Context aggregation and 5-state deterministic classification on the 90s Slow Tick
+- Menu bar status updates via the unified stream
 
-### Slice 4: Drift Intervention Loop
-- [ ] Soft-drift grace period
-- [ ] Hard-drift notification with cooldown
-- [ ] Explainability bullets
-- [ ] Pause / break actions
+**Slice 4: Drift Intervention Loop**
+- Soft-drift grace period (silent)
+- Hard-drift notification + 15-minute cooldown
+- JSON-backed explainability bullets rendered blindly by UI
+- "Observe-only" grace period for new installs
+- The Recovery Anchor message on return from drift
 
-### Slice 5: Evening Reflection Loop
-- [ ] Evening debrief packet export
-- [ ] Evening prompt export
-- [ ] Strict evening JSON import
+**Slice 5: Evening Reflection Loop**
+- Evening debrief packet export (automatically appending episode evidence bullets)
+- Evening prompt export (strict JSON)
+- Strict evening JSON import via the unified parser
 
-### Slice 6: Post-MVP Learning
-- [ ] Ambiguity resolution memory
-- [ ] Praise tuning
-- [ ] Reviewable memory promotion
-- [ ] Local AI helpers where clearly justified
+**Slice 6: Post-MVP Learning**
+- Ambiguity resolution tracking
+- Praise tuning (max 1 per block)
+- SQLite Reviewable durable-rule promotion
 
 ---
 
-### 🧠 TypeScript Developer Task List (Logic Layer)
-*Tech Stack: Node.js, TypeScript, Zod, better-sqlite3, Express/Fastify (HTTP & SSE). Use local AI only for bounded, non-critical helpers and keep deterministic behavior as the default.*
+## 1. 🧠 TypeScript Developer To-Do's (Logic Layer)
+*Tech Stack: Node.js, TypeScript, Zod, better-sqlite3. Use local AI only for bounded, non-critical helpers. Design rule: fully deterministic by default. All system loops respect the top-level mode gate and run on exactly two unified timers (Fast Tick & Slow Tick).*
 
 **Phase 0: Contracts, Fixtures, and Health**
 - [ ] Initialize `logic/` Node+TS project with strict mode and `vitest`.
-- [ ] Define core Zod schemas for domain primitives (`Timestamp`, `FocusState`, `Confidence`, `HealthStatus`).
-- [ ] Define outbound bridge schemas (`MenuBarViewModel`, `DashboardViewModel`, `ClarificationViewModel`, `InterventionViewModel`, `SystemHealthViewModel`).
-- [ ] Define inbound bridge schemas (`PauseAction`, `UpdateExclusionsAction`, `ResolveAmbiguityAction`, `ImportFocusForTodayAction`, `ImportEveningDebriefAction`, `NotificationAction`).
-- [ ] Add explicit `schema_version` fields to bridge payloads and morning/evening import formats.
-- [ ] Create JSON fixture payloads and golden tests for all inbound/outbound contracts so Swift and TS can validate against the same examples.
-- [ ] Set up HTTP server scaffolding with `/health` and `/diagnostics`, including separate status reporting for DB, Screenpipe, and optional Ollama integrations.
+- [ ] Define core Zod schemas for domain primitives (`Timestamp`, `Confidence`, `HealthStatus`).
+- [ ] Define rigid top-level `Mode` enum: `booting | no_plan | running | paused | degraded_screenpipe | logic_error`.
+- [ ] Define simplified 5-state runtime state enum: `aligned | uncertain | soft_drift | hard_drift | paused`. 
+- [ ] Add companion flags to the classification: `is_support: boolean` (e.g. support work is just `aligned` + `is_support: true`).
+- [ ] Define a single outbound `SystemState` schema for the `GET /stream` endpoint containing: `schema_version`, `mode`, `menu_bar`, `dashboard`, `clarification_hud`, `intervention`, and `system_health`.
+- [ ] Define a single inbound `Command` schema for `POST /command` using a type discriminator: `pause`, `resume`, `update_exclusions`, `resolve_ambiguity`, `import_coaching_exchange`, `notification_action`, `purge_all`.
+- [ ] Define unified `CoachingExchange` import schema with an `exchange_type: "morning_plan" | "evening_debrief"` discriminator and an explicit `schema_version` field.
+- [ ] Create JSON fixture payloads and golden tests for all inbound/outbound contracts so Swift validates against the same examples.
+- [ ] Set up HTTP server scaffolding with `GET /stream` (SSE) and `POST /command`. Keep `/health` and `/diagnostics` for internal probes only.
+- [ ] Create a central mode gate utility so classification, intervention, and progress logic evaluate **only** if `mode === "running"`.
 
-**Phase 1: Persistence & Canonical Memory**
+**Phase 1: Persistence & Canonical Memory (2 Layers)**
 - [ ] Set up `better-sqlite3`. Enable `WAL` journal mode and `busy_timeout`.
-- [ ] Write a lightweight schema migration runner.
-- [ ] Base migrations: `app_settings`, `privacy_exclusions`, `runtime_health_events`.
+- [ ] Write a lightweight schema migration runner with explicit versioning.
+- [ ] Base migrations: `app_settings` (including a field for `observe_only_ticks_remaining`), `privacy_exclusions`, and `runtime_health_events`.
 - [ ] Planning migrations: `daily_plans`, `goal_contracts`, `task_contracts`.
 - [ ] Observation migrations: `observations`, `context_windows`, `episodes`, `classifications`.
-- [ ] Learning migrations: `daily_memory_notes`, `durable_memory_items`, `user_corrections`, `labeled_examples`, `ambiguity_events`, `notification_history`, `review_queue`.
-- [ ] Implement `SettingsRepo` and `DailyPlanRepo` with CRUD methods and unit tests.
-- [ ] Implement a startup rule: if there is no imported daily plan, the system stays in explicit `no_plan` mode and does not emit drift interventions.
+- [ ] Add a `JSON` column to the `classifications` table named `explainability` to dynamically store arrays of `{ code, detail, weight }`.
+- [ ] Learning migrations (reduced for MVP): `daily_memory_notes` (Daily Memory layer) and `durable_rules` (Long-term rules layer for user-confirmed patterns). *Drop vector retrieval indices for V1.* 
+- [ ] Implement `SettingsRepo`, `DailyPlanRepo`, `PrivacyExclusionsRepo`, and `ClassificationRepo` with CRUD methods.
+- [ ] Implement startup rule: if there is no imported daily plan to load, system top-level state enters `no_plan` mode; engines idle automatically.
+- [ ] Implement default privacy exclusions preset: upon first boot, automatically seed the `privacy_exclusions` table with standard regex patterns for password managers (1Password, Keychain) and common banking/checkout domains.
 
-**Phase 2: Screenpipe Ingestion & Privacy**
-- [ ] Implement Screenpipe HTTP client with a `/health` probe and degraded-mode detection.
+**Phase 2: Screenpipe Ingestion & Privacy Filtering**
+- [ ] Implement Screenpipe HTTP client with a `/health` probe and degraded-mode detection (sets `mode = "degraded_screenpipe"`).
 - [ ] Implement Screenpipe `/search` polling adapter with overlap and deduplication.
 - [ ] Implement `EvidenceNormalizer` to map raw Screenpipe records into an app-owned evidence schema.
-- [ ] Implement `PrivacyFilter` so excluded apps/domains are dropped before persistence; only minimal audit counters may remain.
-- [ ] Implement `ContextAggregator` to roll 10-15s raw events into contiguous 60-90s `ContextWindow`s.
-- [ ] Add replay fixtures for normalized evidence so classification work can be tested without live Screenpipe data.
+- [ ] Implement `PrivacyFilter` so excluded apps/domains are completely dropped before logic checks; only minimal audit counters may remain.
+- [ ] Implement `ContextAggregator` to roll raw events into contiguous 90s `ContextWindow`s.
+- [ ] Add replay fixtures for normalized evidence to test classification offline.
 
-**Phase 3: Morning Flow Export/Import**
-- [ ] Implement `MorningContextPacketBuilder` using yesterday carry-over context plus durable memory that is safe to surface.
-- [ ] Implement `MorningPromptGenerator` as a copy-paste prompt that instructs ChatGPT to return strict final JSON only.
-- [ ] Implement `FocusForTodayParser` with explicit validation errors for malformed JSON, missing fields, and unsupported schema versions.
-- [ ] Implement import service to save validated plan data into `daily_plans` and publish initial `DashboardViewModel` and `MenuBarViewModel`.
-- [ ] Expose `/morning/prompt` and `/morning/import` endpoints.
-- [ ] Add parser golden tests using valid, invalid, and near-miss morning payload examples.
+**Phase 3: Morning Flow Export & Unified JSON Import**
+- [ ] Implement `MorningContextPacketBuilder` using yesterday carry-over context plus durable rules safe to surface.
+- [ ] Implement `MorningPromptGenerator` as a copy-paste prompt instructing ChatGPT explicitly to return **strict schema-versioned JSON only** (no markdown text outside the JSON).
+- [ ] Implement `CoachingExchangeParser` handling the unified import payload. Branch to `exchange_type === "morning_plan"`.
+- [ ] Add explicit validation errors for malformed JSON, missing fields, or unsupported schema versions.
+- [ ] Implement import service to save validated plan data into `daily_plans`, immediately transition `mode` to `running`, and push the SSE state block.
 
-**Phase 4: Classification & Focus State**
-- [ ] Implement deterministic rules that evaluate evidence against declared task/support patterns without flat app-level truth.
-- [ ] Implement weighted evidence scoring as a secondary input, not the sole classifier.
-- [ ] Implement `FocusStateMachine` for `on_task`, `supporting_task`, `soft_drift`, `hard_drift`, `uncertain`, `break`, `meeting`, `idle`, and `paused`.
-- [ ] Implement hysteresis to require sustained evidence across multiple ticks before state changes.
-- [ ] Implement retrieval of recent user corrections before any LLM-assisted ambiguity handling.
-- [ ] Implement `/action/pause` to halt classifier evaluations and emit a `paused` state immediately.
-- [ ] Add replay tests that verify state transitions for common sequences such as on-task -> soft drift -> recovery and on-task -> hard drift.
+**Phase 4: Classification, State Machine & Recovery Anchor**
+- [ ] Implement deterministic rules evaluating evidence against today's declared tasks.
+- [ ] Back all evaluation checks into an `{ code, detail, weight }` format stored to the `explainability` JSON array on the classification output.
+- [ ] Implement hysteresis rules to require sustained evidence across multiple ticks before triggering a state change.
+- [ ] Implement retrieval of recent answers from SQLite `durable_rules` before triggering LLM-assisted ambiguity requests.
+- [ ] Implement the **Recovery Anchor**: cache the `last_good_context` string (e.g., active window title/URL) locally whenever the state is high-confidence `aligned`.
+- [ ] Implement `pause` command handling to halt classifier evaluations and emit `mode = "paused"` into the stream immediately.
+- [ ] Add replay tests verifying required state transitions (e.g. aligned -> soft drift -> recovery; aligned -> hard drift).
 
-**Phase 5: Progress, Explainability, and Interventions**
-- [ ] Implement `EpisodeBuilder` to roll `ContextWindow`s into 3-5 minute episodes for progress reasoning.
-- [ ] Implement V1 goal matching and time-based progress only: match aligned time to declared tasks and intended daily hours. Do not block MVP on milestone/artifact inference.
-- [ ] Implement `ExplainabilityGenerator` that translates internal reason codes into 2-3 human-readable bullets.
-- [ ] Implement `InterventionEngine` for soft-drift silence, hard-drift redirect candidates, and cooldown enforcement.
-- [ ] Implement cooldown tracking so no hard-drift notification can repeat within 15 minutes.
-- [ ] Add notification policy tests covering cooldowns, no-plan mode, paused mode, and degraded Screenpipe mode.
+**Phase 5: Progress, Explainability & Message Discipline**
+- [ ] Implement `EpisodeBuilder` to roll `ContextWindow`s up into 3-5 minute block episodes.
+- [ ] Implement V1 goal matching: associate aligned/supporting block time to declared tasks/hours with a confidence rating.
+- [ ] Implement `ExplainabilityGenerator` that references internal reason codes and spits out 2-3 human-readable bullets into the `classifications.explainability` field.
+- [ ] Create a centralized `messages.ts` dictionary mapped to states. Hardcode positive reinforcement NLP prefixes strictly (`Locked.`, `Check.`, `Reset.`, `Back.`). No inline UI text is allowed elsewhere in the domain core.
+- [ ] Implement `InterventionEngine`: stays entirely silent on soft-drift; emits redirect notification candidate on sustained hard-drift.
+- [ ] Implement cooldown tracking: no hard-drift notification can repeat within a rolling 15-minute gap.
+- [ ] Implement "Observe-Only" Grace Period: for the first 50-100 ticks of a new installation, calculate the engine normally (updates UI colors), but actively mute the system from emitting native push notifications.
+- [ ] Unpack the Recovery Anchor: Upon exiting `hard_drift`, fetch `last_good_context` and emit a structured intervention via `messages.ts` (e.g., `"Back. Continue at [Figma - Checkout Design]."`).
 
 **Phase 6: Evening Flow & Reviewable Learning**
-- [ ] Implement `EveningDebriefPacketBuilder` from plans, episodes, drift blocks, pauses, and ambiguity overrides.
-- [ ] Implement `EveningPromptGenerator` as a copy-paste prompt that asks ChatGPT for strict final JSON only.
-- [ ] Implement `EveningDebriefParser` with schema-version checks and explicit validation errors.
-- [ ] Store imported debrief outputs as structured learning input, separate from raw exports and separate from any cloud conversation text.
-- [ ] Implement a review queue for proposed durable memories or rule updates instead of auto-promoting them immediately.
-- [ ] Add parser golden tests using valid, invalid, and adversarial evening payload examples.
+- [ ] Implement `EveningDebriefPacketBuilder` stringing together plans, episodes, drift blocks, pauses, and overrides.
+- [ ] Reuse `ExplainabilityGenerator` to automatically append 2-3 concrete evidence bullets to every task episode within the export packet to supply the LLM with hard facts.
+- [ ] Implement `EveningPromptGenerator` instructing ChatGPT to spit back **strict JSON only**.
+- [ ] Branch `CoachingExchangeParser` for `exchange_type === "evening_debrief"`.
+- [ ] Parse imported structured debriefs in SQLite `daily_memory_notes`.
+- [ ] Implement a review queue for candidate durable rule updates. (Rules must be user-confirmed to pass to `durable_rules`).
 
 **Phase 7: Ambiguity Resolution & Praise**
-- [ ] Implement stable ambiguity detection so clarification appears only after sustained uncertainty.
-- [ ] Implement `/action/resolve-ambiguity` to apply the correction to the current window, optionally remember the pattern, and record a labeled example.
-- [ ] Implement praise eligibility rules for uninterrupted `on_task` streaks longer than 25 minutes.
-- [ ] Generate praise candidates using deterministic templates first; keep message copy task-level and sparse.
-- [ ] Add a narrow Ollama adapter only if deterministic phrasing proves insufficient; it must be optional and never block runtime classification or notifications.
+- [ ] Implement stable ambiguity detection so clarification is required only after prolonged sustained uncertainty.
+- [ ] Implement `resolve_ambiguity` command logic: apply manual override string, record labeled example, and optionally add it to `durable_rules`.
+- [ ] Implement praise eligibility: an uninterrupted `aligned` streak longer than 25 minutes. Gated strictly behind the observe-only grace period.
+- [ ] Generate praise text strictly using `messages.ts` templates (`Locked.` prefix). Cap at max 1 praise per focus block.
 
-**Phase 8: Scheduler, Diagnostics, and Maintenance**
-- [ ] Implement the master scheduler: 15s ingest tick, 90s classify tick, 3m progress tick.
-- [ ] Implement scheduled SQLite compaction that preserves review/audit data required for user trust.
-- [ ] Implement `/action/purge-all` to clear app-owned data without touching Screenpipe storage.
-- [ ] Add diagnostics for current classifier state, last evidence window, active cooldowns, and latest health transitions.
+**Phase 8: Two-Tick Scheduler, Diagnostics, and Maintenance**
+- [ ] Implement the simplified master scheduler:
+  - **Fast Tick (15s)**: Ingest observations, normalize, apply privacy filters, build raw windows.
+  - **Slow Tick (90s)**: Classify state, evaluate progress, govern interventions, and emit payload to `GET /stream`.
+- [ ] Drop the MVP 3-minute progress tick entirely; bundle progress logic directly into the 90s Slow Tick loop.
+- [ ] Implement SQLite compaction scheduling to preserve review/audit data safely for user trust.
+- [ ] Implement `purge_all` command handler to dump app-owned data schemas seamlessly without destroying the underlying Screenpipe local server.
 
 ---
 
-### 🖥️ Mac Developer Task List (UI Layer)
-*Tech Stack: Swift, SwiftUI, AppKit, SMAppService, UserNotifications.*
+## 2. 🖥️ Mac Developer To-Do's (UI Layer)
+*Tech Stack: Swift, SwiftUI, AppKit, SMAppService, UserNotifications. Keep the Swift App as a "Dumb Terminal" reacting passively to the unified TS stream.*
 
-**Phase 0: App Shell & Contract Safety**
-- [ ] Initialize macOS SwiftUI app. Remove dock icon and configure required entitlements.
-- [ ] Define Swift models from the shared bridge contract and validate them against the JSON fixture payloads from the TS layer.
-- [ ] Implement `BridgeClient` using `URLSession` for action posts plus SSE streaming for state updates.
-- [ ] Add top-level UI states for `booting`, `logic_disconnected`, `screenpipe_degraded`, `no_plan`, and `paused`.
-- [ ] Add a small diagnostics surface so the user can see why the coach is passive instead of guessing.
+**Phase 0: App Shell & Unified Bridge Client**
+- [ ] Initialize macOS SwiftUI app. Remove dock icon and configure standard entitlements.
+- [ ] Define Swift models mapping exactly to the shared JSON `SystemState` schema block, and write test decoders against the TS-generated unit fixtures.
+- [ ] Implement `BridgeClient` managing a persistent `URLSession` SSE connection (`GET /stream`) mapping directly to app environment variables.
+- [ ] Implement `BridgeClient` single POST dispatcher (`POST /command`) for all outbound data actions.
+- [ ] Map the global TS `Mode` to the top-level SwiftUI router wrapper checking for `booting`, `no_plan`, `running`, `paused`, `degraded_screenpipe`, and `logic_error`.
+- [ ] Build a small diagnostic UI referencing the `SystemHealthViewModel` detailing Screenpipe/Database connection integrity.
 
-**Phase 1: Morning Flow & Passive UI**
-- [ ] Create `MorningFlowView` with a read-only morning prompt area and a `Copy` action.
-- [ ] Add a multiline input for the final ChatGPT JSON result.
-- [ ] Wire `ImportFocusForTodayAction` and render parser errors inline in a way the user can fix.
-- [ ] Create a minimal dashboard state that can show imported goals before live tracking exists.
-- [ ] Ensure the UI clearly distinguishes `no plan imported yet` from `system broken`.
+**Phase 1: Paste Sanitizer & Morning Flow**
+- [ ] Write a 20-line **Paste Sanitizer** String Extension. This function must catch manual copy/paste sloppiness before submission by automatically stripping markdown code fences (```json), stripping out conversational intro/outro dialogue, and normalizing smart quotes globally into standard quotation marks.
+- [ ] Create `MorningFlowView` displaying the read-only morning prompt and `Copy to Clipboard` feature.
+- [ ] Add a multiline text area for ChatGPT's response. Run `.pasteSanitize()` on the text content, encapsulate it inside the `import_coaching_exchange` object, and dispatch via `POST /command`.
+- [ ] Decode TS parser errors inline cleanly so the user can easily re-edit their payload string.
 
 **Phase 2: Menu Bar Status**
-- [ ] Create a minimal `MenuBarExtra` wrapper.
-- [ ] Bind icon tint to `MenuBarViewModel` state: green, blue, yellow, red, gray.
-- [ ] Render active task, timer, and confidence in the dropdown.
-- [ ] Add quick actions for pause durations and break mode.
-- [ ] Wire quick actions to `PauseAction` payloads through `BridgeClient`.
+- [ ] Create a minimal `MenuBarExtra` view implementation.
+- [ ] Bind icon tint colors natively to the `MenuBarViewModel` state payload logic:
+  - `aligned` -> Green
+  - `aligned` + `is_support == true` -> Blue
+  - `uncertain` / `soft_drift` -> Yellow
+  - `hard_drift` -> Red
+  - `paused` / `no_plan` / `degraded` -> Gray
+- [ ] Render the active task label, timer, and current focus scope within the dropdown.
+- [ ] Add "Pause Coaching" and explicit "Take a Break" actions routing unified actions cleanly back to TS.
 
-**Phase 3: Explainability, Health, and Settings**
-- [ ] Build the main dashboard window for goals, progress, and confidence.
-- [ ] Implement the "Why am I seeing this?" accordion using TS-generated evidence bullets.
-- [ ] Create Settings tabs for General, Privacy, and Advanced.
-- [ ] Build privacy exclusions UI for app/domain limits and wire it to `UpdateExclusionsAction`.
-- [ ] Build the destructive `Delete All Coaching Data` flow with confirmation.
-- [ ] Implement `SMAppService` support for launch at login.
+**Phase 3: Explainability Dashboard & Settings**
+- [ ] Build the main dashboard window to track active focus goals/hours remaining against progress percentages.
+- [ ] Build the "Why am I seeing this?" accordion section. Note: The UI must **blindly traverse and render** the incoming `{ code, detail, weight }` JSON explainability array passed via `SystemState`. No inferential context evaluation is handled in Swift natively.
+- [ ] Build Privacy exclusions UI text-fields showing the TS-seeded default domain strings. Dispatch UI updates to `update_exclusions` payloads automatically.
+- [ ] Form a deeply nested destructive "Delete All Coaching Data" UI flow wired natively to the TS `purge_all` command.
+- [ ] Wire `SMAppService` setup correctly for launch-at-login execution.
 
 **Phase 4: Interventions & Clarification HUD**
-- [ ] Register `UNUserNotificationCenter` and handle the denied-permission state gracefully.
-- [ ] Listen for TS interventions and trigger native local notifications for hard drift first.
-- [ ] Add notification actions for `Intentional Detour` and `Return Now`, and route them back to TS.
-- [ ] Scaffold `ClarificationHUD` as a transient `NSPanel`.
-- [ ] Display clarification options only when the TS layer emits a `ClarificationViewModel`.
-- [ ] Wire HUD submissions to `ResolveAmbiguityAction` and dismiss immediately.
-- [ ] Add praise notification rendering only after hard-drift notifications are working and rate-limited.
+- [ ] Request `UNUserNotificationCenter` permissions. Map denial states gracefully to an overarching warning flag on the dashboard if permissions are withheld.
+- [ ] Push native Local Notifications reacting uniquely to `SystemState.intervention` command flags (e.g., Hard drift, Praise).
+- [ ] Display the "Recovery Anchor" text string (e.g., `"Back. Continue at..."`) directly from TS as is. Under no circumstances rewrite Logic messaging in Swift.
+- [ ] Catch dynamic Notification actions explicitly via `Intentional Detour` / `Return Now` and pipe user responses directly downstream back to `POST /command`.
+- [ ] Mount a `ClarificationHUD` via an invisible transient `NSPanel`. Unhide this element **only** if the SSE active stream passes a valid `ClarificationViewModel`. Provide simple click-options corresponding to the task scopes and dispatch `resolve_ambiguity` payloads upon selection.
 
 **Phase 5: Evening Flow & Review UI**
-- [ ] Create `EveningDebriefView` with read-only packet text and a `Copy` action.
-- [ ] Add a multiline input for the final evening JSON result and wire `ImportEveningDebriefAction`.
-- [ ] Render parser errors inline for malformed evening imports.
-- [ ] Add a simple review surface for proposed memory/rule updates from the TS review queue.
+- [ ] Replicate the Morning Flow setup: Create `EveningDebriefView`, mount the TS-generated debrief payload, provide a `Copy` mechanism. 
+- [ ] Add the paste receptacle for ChatGPT's response, run the Paste Sanitizer logic over it, and trigger the evening `import_coaching_exchange` command submission.
+- [ ] Supply a very simple table UI rendering proposals trapped in `SystemState.dashboard.reviewQueue`. Implement simple Checkbox selection for promoting/rejecting new Durable Rules logic changes.
 
 ---
 
-### ✅ Cross-Cutting Quality Tasks
-- [ ] Add contract compatibility tests so TS fixture payloads decode in Swift without silent drift.
-- [ ] Add replay-driven classifier tests based on realistic workday traces.
-- [ ] Add prompt/parser golden tests for morning and evening import formats.
-- [ ] Add manual QA scripts for `no plan`, `paused`, `notification denied`, `Screenpipe down`, and `logic service disconnected`.
-- [ ] Add explicit copy/style checks so praise and redirects stay task-level and non-judgmental.
+## 3. 🚢 Bringing It All Together (Integration & Release)
+*(Complete this only after Slices 1-5 work end to end locally. This merges the Logic application and native Swift wrapper tightly into a single redistributable unit.)*
 
----
+**Cross-Cutting Quality Test Actions**
+- [ ] Compatibility tests: verify macOS JSON deserializers exactly match TS payloads without schema drift breakages.
+- [ ] Replay test traces: Mock JSON streams mapping entirely through all 5 machine states utilizing mock 2-tick intervals. 
+- [ ] Paste Sanitizer E2E Check: Explicitly feed raw, aggressively-formatted GPT outputs complete with verbose intro greetings, smart quotes, and code blocks into the macOS fields. Confirm Swift properly cleans and the TS regex passes validation cleanly.
+- [ ] UX Alignment checks: Enforce that every possible generated notification adheres natively to the TS `messages.ts` text prefix logic (`Check.` / `Locked.` / `Reset.` / `Back.`).
 
-### 🚢 Bringing It All Together (Integration & Release)
-*(Complete this only after Slices 1-5 work end to end in local development.)*
-
-- [ ] Bundle the TS logic project into a single macOS executable using a supported strategy such as `esbuild` + `sea`.
-- [ ] Move the generated binary into the Xcode app bundle resources.
-- [ ] Launch the TS binary from the Swift app on startup and terminate it cleanly on app exit.
-- [ ] Pass an available local port from Swift to TS to avoid port conflicts.
-- [ ] End-to-end test: morning JSON import -> stored plan -> initial dashboard/menu update.
-- [ ] End-to-end test: Screenpipe ingest -> classification -> menu bar color changes.
-- [ ] End-to-end test: soft drift stays silent; hard drift sends exactly one notification during cooldown window.
-- [ ] End-to-end test: Screenpipe unavailable or notification permissions denied leaves the app understandable rather than broken.
-- [ ] End-to-end test: evening packet export -> ChatGPT JSON import -> review queue entries created.
-- [ ] Set up Xcode build phases so the embedded TS binary is signed before the outer app bundle is signed.
-- [ ] Run notarization on the final `.app` and verify network and notification entitlements remain intact.
+**Integration, Packing, & Release Pipeline**
+- [ ] Package the Node logic environment cleanly using `esbuild` paired natively with `Node SEA` (Single Executable Application wrapper) compiling to a single file.
+- [ ] Embed the generated Node binary resource cleanly inside the Xcode Swift App resources root context. 
+- [ ] Structure the macOS Application wrapper lifecycle (`AppDelegate`/`App`) to fire an external process spinning up the embedded TS binary immediately on load. Ensure gracefully triggered `SIGTERM`/`SIGKILL` traps immediately collapse the logic binary explicitly on App termination events. 
+- [ ] Pass a dynamic local system port flag dynamically from Swift natively down to the TS binary on app-launch to guarantee 0 conflicts against overlapping local host ports. 
+- [ ] **E2E Check**: Open App First Run -> Ensure SQLite auto-seeded 1Password / Banking filters natively into DB.
+- [ ] **E2E Check**: Run full Morning GPT exchange -> System properly flips from `no_plan` directly to `running` rendering Green.
+- [ ] **E2E Check**: Test Observe-Only period functionality -> Run classifier into Hard Drift intentionally -> Confirm UI UI menu bar updates properly to Red internally, but physically suppresses all native OS notification bells.
+- [ ] **E2E Check**: Trigger and resolve Hard Drift intentionally post-grace period -> Assert cooldown flag is raised preventing secondary back-to-back pings. Confirm Recovery Anchor fires upon return. 
+- [ ] Establish explicit internal Xcode build phases instructing scripts to uniquely code-sign the enclosed Node logic framework prior to the universal outer macOS `.app` envelope receiving an application signature.
+- [ ] Upload wrapper entirely through Apple Notarization checks. Test executed App file confirming Network (localhost TS/Screenpipe integration hook) limits functionality persists dynamically.
 
 ---
 
 ### Deferred Until After MVP
-- [ ] Artifact-based progress inference from commits, docs, exports, or external tools.
-- [ ] Milestone auto-detection prompts such as "Mark complete?".
-- [ ] Rich local AI summarization before morning/evening prompt generation.
-- [ ] LLM-generated praise or redirect phrasing as the default path.
-- [ ] Any feature that requires the app to infer canonical truth from raw chat transcripts rather than structured imports.
+- [ ] File-based manual memory mirrors (e.g. `MEMORY.md` dumps). V1 leans cleanly entirely on direct SQLite `durable_rules` mapping natively.
+- [ ] Advanced artifact mapping (reading from Git branches, export signals, or external document tracking inference hooks natively). 
+- [ ] Direct execution natively of Deep/Rich LLM conversation modeling (agent conversational models strictly defer out mapping via raw GPT interface imports internally).
+- [ ] RAG execution mapping over raw vectorized retrieval chunk tables (Strictly avoided across MVP timeline implementation scopes).

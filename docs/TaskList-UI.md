@@ -1,0 +1,61 @@
+By architecting the software with a strict boundary—**the headless TypeScript layer holds all the logic and memory, while the macOS UI is purely a dumb rendering shell**—both developers can largely work in parallel once Phase 1 (Bridge Contracts) is complete. 
+
+This task list reflects the tightened V1 MVP architecture:
+
+- one unified `GET /stream` endpoint that emits a single `SystemState` envelope
+- one unified `POST /command` endpoint for all Swift-to-TypeScript actions
+- one top-level `Mode` enum: `booting | no_plan | running | paused | degraded_screenpipe | logic_error`
+- one reduced focus-state model: `aligned | uncertain | soft_drift | hard_drift | paused`
+- one `is_support` flag for aligned support work instead of separate focus states
+- two scheduler ticks only: `15s` fast ingest and `90s` slow evaluation
+- two memory layers only for MVP: `Daily Memory` and `Durable Rules`, both in SQLite
+- strict schema-versioned JSON for morning and evening cloud-coach exchange
+
+---
+
+## 2. 🖥️ Mac Developer To-Do's (UI Layer)
+*Tech Stack: Swift, SwiftUI, AppKit, SMAppService, UserNotifications. Keep the Swift App as a "Dumb Terminal" reacting passively to the unified TS stream.*
+
+**Phase 0: App Shell & Unified Bridge Client**
+- [ ] Initialize macOS SwiftUI app. Remove dock icon and configure standard entitlements.
+- [ ] Define Swift models mapping exactly to the shared JSON `SystemState` schema block, and write test decoders against the TS-generated unit fixtures.
+- [ ] Implement `BridgeClient` managing a persistent `URLSession` SSE connection (`GET /stream`) mapping directly to app environment variables.
+- [ ] Implement `BridgeClient` single POST dispatcher (`POST /command`) for all outbound data actions.
+- [ ] Map the global TS `Mode` to the top-level SwiftUI router wrapper checking for `booting`, `no_plan`, `running`, `paused`, `degraded_screenpipe`, and `logic_error`.
+- [ ] Build a small diagnostic UI referencing the `SystemHealthViewModel` detailing Screenpipe/Database connection integrity.
+
+**Phase 1: Paste Sanitizer & Morning Flow**
+- [ ] Write a 20-line **Paste Sanitizer** String Extension. This function must catch manual copy/paste sloppiness before submission by automatically stripping markdown code fences (```json), stripping out conversational intro/outro dialogue, and normalizing smart quotes globally into standard quotation marks.
+- [ ] Create `MorningFlowView` displaying the read-only morning prompt and `Copy to Clipboard` feature.
+- [ ] Add a multiline text area for ChatGPT's response. Run `.pasteSanitize()` on the text content, encapsulate it inside the `import_coaching_exchange` object, and dispatch via `POST /command`.
+- [ ] Decode TS parser errors inline cleanly so the user can easily re-edit their payload string.
+
+**Phase 2: Menu Bar Status**
+- [ ] Create a minimal `MenuBarExtra` view implementation.
+- [ ] Bind icon tint colors natively to the `MenuBarViewModel` state payload logic:
+  - `aligned` -> Green
+  - `aligned` + `is_support == true` -> Blue
+  - `uncertain` / `soft_drift` -> Yellow
+  - `hard_drift` -> Red
+  - `paused` / `no_plan` / `degraded` -> Gray
+- [ ] Render the active task label, timer, and current focus scope within the dropdown.
+- [ ] Add "Pause Coaching" and explicit "Take a Break" actions routing unified actions cleanly back to TS.
+
+**Phase 3: Explainability Dashboard & Settings**
+- [ ] Build the main dashboard window to track active focus goals/hours remaining against progress percentages.
+- [ ] Build the "Why am I seeing this?" accordion section. Note: The UI must **blindly traverse and render** the incoming `{ code, detail, weight }` JSON explainability array passed via `SystemState`. No inferential context evaluation is handled in Swift natively.
+- [ ] Build Privacy exclusions UI text-fields showing the TS-seeded default domain strings. Dispatch UI updates to `update_exclusions` payloads automatically.
+- [ ] Form a deeply nested destructive "Delete All Coaching Data" UI flow wired natively to the TS `purge_all` command.
+- [ ] Wire `SMAppService` setup correctly for launch-at-login execution.
+
+**Phase 4: Interventions & Clarification HUD**
+- [ ] Request `UNUserNotificationCenter` permissions. Map denial states gracefully to an overarching warning flag on the dashboard if permissions are withheld.
+- [ ] Push native Local Notifications reacting uniquely to `SystemState.intervention` command flags (e.g., Hard drift, Praise).
+- [ ] Display the "Recovery Anchor" text string (e.g., `"Back. Continue at..."`) directly from TS as is. Under no circumstances rewrite Logic messaging in Swift.
+- [ ] Catch dynamic Notification actions explicitly via `Intentional Detour` / `Return Now` and pipe user responses directly downstream back to `POST /command`.
+- [ ] Mount a `ClarificationHUD` via an invisible transient `NSPanel`. Unhide this element **only** if the SSE active stream passes a valid `ClarificationViewModel`. Provide simple click-options corresponding to the task scopes and dispatch `resolve_ambiguity` payloads upon selection.
+
+**Phase 5: Evening Flow & Review UI**
+- [ ] Replicate the Morning Flow setup: Create `EveningDebriefView`, mount the TS-generated debrief payload, provide a `Copy` mechanism. 
+- [ ] Add the paste receptacle for ChatGPT's response, run the Paste Sanitizer logic over it, and trigger the evening `import_coaching_exchange` command submission.
+- [ ] Supply a very simple table UI rendering proposals trapped in `SystemState.dashboard.reviewQueue`. Implement simple Checkbox selection for promoting/rejecting new Durable Rules logic changes.
