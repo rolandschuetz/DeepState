@@ -57,6 +57,40 @@ final class MorningFlowViewTests: XCTestCase {
       """
     )
   }
+
+  func testMapsValidationResultIntoInlineFeedback() {
+    XCTAssertEqual(
+      MorningFlowPresenter.importFeedback(
+        from: CommandActionResult(
+          correlationId: "corr_1",
+          commandId: nil,
+          kind: .importCoachingExchange,
+          message: "Command payload failed validation.",
+          issues: ["payload.raw_text: Invalid JSON"],
+          status: .validationError
+        )
+      ),
+      MorningFlowImportFeedback(
+        title: "Command payload failed validation.",
+        detailLines: ["payload.raw_text: Invalid JSON"]
+      )
+    )
+  }
+
+  func testIgnoresSuccessfulImportResult() {
+    XCTAssertNil(
+      MorningFlowPresenter.importFeedback(
+        from: CommandActionResult(
+          correlationId: "corr_2",
+          commandId: "cmd_1",
+          kind: .importCoachingExchange,
+          message: "Command accepted.",
+          issues: nil,
+          status: .success
+        )
+      )
+    )
+  }
 }
 
 private final class MockClipboardWriter: ClipboardWriting {

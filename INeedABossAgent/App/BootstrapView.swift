@@ -23,8 +23,10 @@ struct BootstrapView: View {
         morningExchange: appStateStore.promptImportState.morningExchange,
         onImport: { payload in
           do {
-            _ = try await bridgeClient.dispatchCommand(payload)
+            let result = try await bridgeClient.dispatchCommand(payload)
+            return MorningFlowPresenter.importFeedback(from: result)
           } catch {
+            return MorningFlowPresenter.importFeedback(from: error)
           }
         }
       )
