@@ -56,13 +56,13 @@ This task list reflects the tightened V1 MVP architecture:
 - [x] Wire `SMAppService` setup correctly for launch-at-login execution.
 
 **Phase 4: Interventions & Clarification HUD**
-- [ ] Request `UNUserNotificationCenter` permissions. Map denial states gracefully to an overarching warning flag on the dashboard if permissions are withheld.
-- [ ] Push native Local Notifications reacting uniquely to `SystemState.intervention` command flags (e.g., Hard drift, Praise).
-- [ ] Register notification categories and deep-link action responses back into the correct app state before forwarding them to TS.
-- [ ] Display the "Recovery Anchor" text string (e.g., `"Back. Continue at..."`) directly from TS as is. Under no circumstances rewrite Logic messaging in Swift.
-- [ ] Catch dynamic Notification actions explicitly via `Intentional Detour` / `Return Now` and pipe user responses directly downstream back to `POST /command`.
-- [ ] Mount a `ClarificationHUD` via an invisible transient `NSPanel`. Unhide this element **only** if the SSE active stream passes a valid `ClarificationViewModel`. Provide simple click-options corresponding to the task scopes and dispatch `resolve_ambiguity` payloads upon selection.
-- [ ] Add keyboard shortcuts, accessibility labels, timeout/auto-dismiss behavior, and stale-state handling for the Clarification HUD and notification responses.
+- [x] Request `UNUserNotificationCenter` permissions. Map denial states gracefully to an overarching warning flag on the dashboard if permissions are withheld.
+- [x] Push native Local Notifications reacting uniquely to `SystemState.intervention` command flags (e.g., Hard drift, Praise).
+- [x] Register notification categories and deep-link action responses back into the correct app state before forwarding them to TS.
+- [x] Display the "Recovery Anchor" text string (e.g., `"Back. Continue at..."`) directly from TS as is. Under no circumstances rewrite Logic messaging in Swift.
+- [x] Catch dynamic Notification actions explicitly via `Intentional Detour` / `Return Now` and pipe user responses directly downstream back to `POST /command`.
+- [x] Mount a `ClarificationHUD` via an invisible transient `NSPanel`. Unhide this element **only** if the SSE active stream passes a valid `ClarificationViewModel`. Provide simple click-options corresponding to the task scopes and dispatch `resolve_ambiguity` payloads upon selection.
+- [x] Add keyboard shortcuts, accessibility labels, timeout/auto-dismiss behavior, and stale-state handling for the Clarification HUD and notification responses.
 
 **Phase 5: Evening Flow & Review UI**
 - [ ] Replicate the Morning Flow setup: Create `EveningDebriefView`, mount the TS-generated debrief payload, provide a `Copy` mechanism. 

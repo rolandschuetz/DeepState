@@ -171,6 +171,7 @@ struct MenuBarExtraView: View {
 
   @ObservedObject var bridgeClient: BridgeClient
   @ObservedObject var appStateStore: AppStateStore
+  @ObservedObject var runtimeEventCoordinator: RuntimeEventCoordinator
 
   var body: some View {
     let dropdownContent = MenuBarExtraPresenter.dropdownContent(
@@ -253,8 +254,11 @@ struct MenuBarExtraView: View {
 }
 
 struct MenuBarExtraLabelView: View {
+  @Environment(\.openWindow) private var openWindow
+
   let connectionState: BridgeClient.ConnectionState
   let menuBarState: MenuBarState
+  @ObservedObject var runtimeEventCoordinator: RuntimeEventCoordinator
 
   var body: some View {
     let content = MenuBarExtraPresenter.labelContent(
@@ -266,12 +270,16 @@ struct MenuBarExtraLabelView: View {
       .symbolRenderingMode(.monochrome)
       .foregroundStyle(content.tintColor)
       .accessibilityLabel(content.accessibilityLabel)
+      .onChange(of: runtimeEventCoordinator.dashboardOpenRequestID) {
+        openWindow(id: DashboardWindowRoute.id)
+      }
   }
 }
 
 #Preview {
   MenuBarExtraView(
     bridgeClient: BridgeClient(),
-    appStateStore: AppStateStore()
+    appStateStore: AppStateStore(),
+    runtimeEventCoordinator: RuntimeEventCoordinator()
   )
 }

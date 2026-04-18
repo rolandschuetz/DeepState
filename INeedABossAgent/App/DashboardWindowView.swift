@@ -243,7 +243,7 @@ final class LaunchAtLoginController: ObservableObject {
   func setEnabled(_ enabled: Bool) async {
     do {
       if enabled {
-        try await SMAppService.mainApp.register()
+        try SMAppService.mainApp.register()
       } else {
         try await SMAppService.mainApp.unregister()
       }
@@ -273,6 +273,7 @@ struct DashboardWindowView: View {
         ScrollView {
           VStack(alignment: .leading, spacing: 20) {
             dashboardHeader(dashboard.header)
+            notificationPermissionWarningSection
             currentFocusSection(dashboard.currentFocus)
             progressSection(dashboard)
             ambiguitiesSection(dashboard.ambiguityQueue)
@@ -385,6 +386,26 @@ struct DashboardWindowView: View {
             .font(.caption)
             .foregroundStyle(.red)
         }
+      }
+    }
+  }
+
+  private var notificationPermissionWarningSection: some View {
+    Group {
+      if appStateStore.settingsState.notificationHealth?.osPermission == .denied {
+        VStack(alignment: .leading, spacing: 4) {
+          Text("Notifications Denied")
+            .font(.headline)
+
+          Text(
+            "Native reminders and praise are blocked until macOS notification permission is restored."
+          )
+          .font(.subheadline)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.yellow.opacity(0.18))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
       }
     }
   }
