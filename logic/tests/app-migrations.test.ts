@@ -6,6 +6,8 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   baseAppMigrations,
+  DEFAULT_OBSERVATION_RETENTION_DAYS,
+  DEFAULT_STALE_CONTEXT_WINDOW_RETENTION_HOURS,
   openDatabase,
   runStartupMigrations,
   type SqliteDatabase,
@@ -50,7 +52,7 @@ describe("baseAppMigrations", () => {
     ]);
   });
 
-  it("creates app_settings with observe_only_ticks_remaining seeded", () => {
+  it("creates app_settings with retention defaults and observe_only_ticks_remaining seeded", () => {
     const database = createDatabase();
 
     runStartupMigrations(database, baseAppMigrations);
@@ -61,15 +63,21 @@ describe("baseAppMigrations", () => {
     const appSettingsRow = database
       .prepare(
         `
-          SELECT settings_id, observe_only_ticks_remaining
+          SELECT
+            settings_id,
+            observe_only_ticks_remaining,
+            observation_retention_days,
+            stale_context_window_retention_hours
           FROM app_settings
           WHERE settings_id = 1
         `,
       )
       .get() as
       | {
+          observation_retention_days: number;
           observe_only_ticks_remaining: number;
           settings_id: number;
+          stale_context_window_retention_hours: number;
         }
       | undefined;
 
@@ -78,10 +86,15 @@ describe("baseAppMigrations", () => {
       "observe_only_ticks_remaining",
       "created_at",
       "updated_at",
+      "observation_retention_days",
+      "stale_context_window_retention_hours",
     ]);
     expect(appSettingsRow).toEqual({
+      observation_retention_days: DEFAULT_OBSERVATION_RETENTION_DAYS,
       observe_only_ticks_remaining: 0,
       settings_id: 1,
+      stale_context_window_retention_hours:
+        DEFAULT_STALE_CONTEXT_WINDOW_RETENTION_HOURS,
     });
   });
 

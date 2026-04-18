@@ -2,6 +2,9 @@ import type { SqliteMigration } from "./migrations.js";
 
 const SQLITE_NOW_UTC = "strftime('%Y-%m-%dT%H:%M:%fZ', 'now')";
 
+export const DEFAULT_OBSERVATION_RETENTION_DAYS = 14;
+export const DEFAULT_STALE_CONTEXT_WINDOW_RETENTION_HOURS = 12;
+
 export const baseAppMigrations: SqliteMigration[] = [
   {
     name: "create app_settings table",
@@ -69,6 +72,21 @@ export const baseAppMigrations: SqliteMigration[] = [
       `);
     },
     version: 120,
+  },
+  {
+    name: "add retention policy settings",
+    up: (database) => {
+      database.exec(`
+        ALTER TABLE app_settings
+          ADD COLUMN observation_retention_days INTEGER NOT NULL DEFAULT ${DEFAULT_OBSERVATION_RETENTION_DAYS}
+          CHECK (observation_retention_days >= 1 AND observation_retention_days <= 365);
+
+        ALTER TABLE app_settings
+          ADD COLUMN stale_context_window_retention_hours INTEGER NOT NULL DEFAULT ${DEFAULT_STALE_CONTEXT_WINDOW_RETENTION_HOURS}
+          CHECK (stale_context_window_retention_hours >= 1 AND stale_context_window_retention_hours <= 168);
+      `);
+    },
+    version: 130,
   },
 ];
 

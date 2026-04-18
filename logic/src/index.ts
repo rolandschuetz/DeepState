@@ -19,6 +19,8 @@ export {
 export {
   appMigrations,
   baseAppMigrations,
+  DEFAULT_OBSERVATION_RETENTION_DAYS,
+  DEFAULT_STALE_CONTEXT_WINDOW_RETENTION_HOURS,
   learningAppMigrations,
   observationAppMigrations,
   planningAppMigrations,
@@ -51,6 +53,17 @@ export {
   runWalCheckpoint,
   withSqliteBusyRetry,
 } from "./db/maintenance.js";
+
+export {
+  compactObservationPayload,
+  getRetentionPolicy,
+  runRetentionMaintenance,
+} from "./db/retention.js";
+
+export type {
+  RetentionMaintenanceResult,
+  RetentionPolicy,
+} from "./db/retention.js";
 
 export type {
   WalCheckpointMode,

@@ -89,19 +89,27 @@ describe("sqlite repositories", () => {
 
     const settings = settingsRepo.getById(1);
     expect(settings?.observeOnlyTicksRemaining).toBe(0);
+    expect(settings?.observationRetentionDays).toBe(14);
+    expect(settings?.staleContextWindowRetentionHours).toBe(12);
     expect(
       settingsRepo.update({
         ...(settings ?? {
           createdAt: "2026-04-18T00:00:00Z",
+          observationRetentionDays: 14,
           observeOnlyTicksRemaining: 0,
           settingsId: 1,
+          staleContextWindowRetentionHours: 12,
           updatedAt: "2026-04-18T00:00:00Z",
         }),
+        observationRetentionDays: 21,
         observeOnlyTicksRemaining: 42,
+        staleContextWindowRetentionHours: 24,
         updatedAt: "2026-04-18T09:00:00Z",
       }),
     ).toBe(true);
     expect(settingsRepo.getById(1)?.observeOnlyTicksRemaining).toBe(42);
+    expect(settingsRepo.getById(1)?.observationRetentionDays).toBe(21);
+    expect(settingsRepo.getById(1)?.staleContextWindowRetentionHours).toBe(24);
 
     dailyPlanRepo.create({
       importedAt: "2026-04-18T08:00:00Z",

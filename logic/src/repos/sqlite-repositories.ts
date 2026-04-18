@@ -131,8 +131,10 @@ const createCrudRepository = <TEntity, TId extends number | string>(
 
 export type AppSettingsRecord = {
   createdAt: string;
+  observationRetentionDays: number;
   observeOnlyTicksRemaining: number;
   settingsId: number;
+  staleContextWindowRetentionHours: number;
   updatedAt: string;
 };
 
@@ -320,8 +322,10 @@ export class SettingsRepo {
     this.#repo = createCrudRepository(database, {
       fromRow: (row) => ({
         createdAt: row.created_at as string,
+        observationRetentionDays: row.observation_retention_days as number,
         observeOnlyTicksRemaining: row.observe_only_ticks_remaining as number,
         settingsId: row.settings_id as number,
+        staleContextWindowRetentionHours: row.stale_context_window_retention_hours as number,
         updatedAt: row.updated_at as string,
       }),
       getId: (entity) => entity.settingsId,
@@ -330,8 +334,10 @@ export class SettingsRepo {
       table: "app_settings",
       toRow: (entity) => ({
         created_at: entity.createdAt,
+        observation_retention_days: entity.observationRetentionDays,
         observe_only_ticks_remaining: entity.observeOnlyTicksRemaining,
         settings_id: entity.settingsId,
+        stale_context_window_retention_hours: entity.staleContextWindowRetentionHours,
         updated_at: entity.updatedAt,
       }),
     });
