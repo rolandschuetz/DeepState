@@ -12,22 +12,12 @@ import {
   type SystemState,
 } from "@ineedabossagent/shared-contracts";
 
+import {
+  createCommandCorrelationId,
+  RetryableCommandError,
+  type CommandActionResult,
+} from "./command-action-result.js";
 import { createDefaultSystemState } from "../system-state/default-system-state.js";
-
-type CommandAcceptance =
-  | {
-      status: "accepted";
-      command_id: string;
-      kind: Command["kind"];
-    }
-  | {
-      status: "validation_error";
-      issues: string[];
-    }
-  | {
-      status: "fatal_failure";
-      message: string;
-    };
 
 type BridgeServerOptions = {
   initialState?: SystemState;
@@ -113,12 +103,18 @@ export const createBridgeServer = (
     }
 
     if (method === "POST" && url === "/command") {
+      const correlationId = createCommandCorrelationId();
+      let commandId: string | null = null;
+
       try {
         const payload = await parseJsonBody(request);
         const parsed = commandSchema.safeParse(payload);
 
         if (!parsed.success) {
-          const validationError: CommandAcceptance = {
+          const validationError: CommandActionResult = {
+            command_id: null,
+            correlation_id: correlationId,
+            message: "Command payload failed validation.",
             status: "validation_error",
             issues: parsed.error.issues.map((issue) =>
               `${issue.path.join(".") || "root"}: ${issue.message}`),
@@ -129,21 +125,42 @@ export const createBridgeServer = (
           return;
         }
 
+        commandId = parsed.data.command_id;
         await options.handleCommand?.(parsed.data);
 
-        const accepted: CommandAcceptance = {
-          status: "accepted",
-          command_id: parsed.data.command_id,
+        const accepted: CommandActionResult = {
+          command_id: commandId,
+          correlation_id: correlationId,
           kind: parsed.data.kind,
+          message: "Command accepted.",
+          status: "success",
         };
 
         response.writeHead(202, { "Content-Type": "application/json" });
         response.end(JSON.stringify(accepted));
         return;
       } catch (error) {
-        const fatalFailure: CommandAcceptance = {
-          status: "fatal_failure",
+        const retryableFailure: CommandActionResult = {
+          command_id: commandId,
+          correlation_id: correlationId,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Unknown retryable command failure.",
+          status: "retryable_failure",
+        };
+
+        if (error instanceof RetryableCommandError) {
+          response.writeHead(503, { "Content-Type": "application/json" });
+          response.end(JSON.stringify(retryableFailure));
+          return;
+        }
+
+        const fatalFailure: CommandActionResult = {
+          command_id: commandId,
+          correlation_id: correlationId,
           message: error instanceof Error ? error.message : "Unknown command failure.",
+          status: "fatal_failure",
         };
 
         response.writeHead(500, { "Content-Type": "application/json" });

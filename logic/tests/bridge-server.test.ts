@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { systemStateSchema } from "@ineedabossagent/shared-contracts";
 
+import { RetryableCommandError } from "../src/server/command-action-result.js";
 import { createBridgeServer, createDefaultSystemState } from "../src/index.js";
 
 const openServers: Array<ReturnType<typeof createBridgeServer>> = [];
@@ -79,12 +80,82 @@ describe("createBridgeServer", () => {
     });
 
     expect(response.status).toBe(202);
-    expect(await response.json()).toEqual({
+    expect(await response.json()).toMatchObject({
       command_id: "c7942526-57a3-4ccb-a4da-2480b496759c",
       kind: "pause",
-      status: "accepted",
+      message: "Command accepted.",
+      status: "success",
     });
     expect(handleCommand).toHaveBeenCalledOnce();
+  });
+
+  it("returns validation_error envelopes for malformed commands", async () => {
+    const bridgeServer = createBridgeServer({
+      heartbeatIntervalMs: 60_000,
+    });
+    openServers.push(bridgeServer);
+
+    const { host, port } = await bridgeServer.listen();
+    const response = await fetch(`http://${host}:${port}/command`, {
+      body: JSON.stringify({
+        schema_version: "1.0.0",
+        command_id: "bad-command-id",
+        sent_at: "2026-04-18T09:00:00Z",
+        kind: "pause",
+        payload: {
+          reason: "user_pause",
+          duration_seconds: 600,
+          note: "Taking a break",
+        },
+      }),
+      headers: {
+        "content-type": "application/json",
+      },
+      method: "POST",
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      command_id: null,
+      message: "Command payload failed validation.",
+      status: "validation_error",
+    });
+  });
+
+  it("returns retryable_failure envelopes for retryable command errors", async () => {
+    const bridgeServer = createBridgeServer({
+      handleCommand: () => {
+        throw new RetryableCommandError("Temporary persistence backoff.");
+      },
+      heartbeatIntervalMs: 60_000,
+    });
+    openServers.push(bridgeServer);
+
+    const { host, port } = await bridgeServer.listen();
+    const response = await fetch(`http://${host}:${port}/command`, {
+      body: JSON.stringify({
+        schema_version: "1.0.0",
+        command_id: "c7942526-57a3-4ccb-a4da-2480b496759c",
+        sent_at: "2026-04-18T09:00:00Z",
+        kind: "pause",
+        payload: {
+          reason: "user_pause",
+          duration_seconds: 600,
+          note: "Taking a break",
+        },
+      }),
+      headers: {
+        "content-type": "application/json",
+      },
+      method: "POST",
+    });
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({
+      command_id: "c7942526-57a3-4ccb-a4da-2480b496759c",
+      message: "Temporary persistence backoff.",
+      status: "retryable_failure",
+    });
   });
 
   it("exposes health and diagnostics probe routes", async () => {
