@@ -7,12 +7,17 @@ import {
 
 import type { SqliteDatabase } from "../db/database.js";
 import { DailyPlanRepo, TaskRepo } from "../repos/sqlite-repositories.js";
+import {
+  applyScreenpipeHealthToSystemState,
+  type ScreenpipeHealthProbe,
+} from "../screenpipe/client.js";
 import { createDefaultSystemState } from "../system-state/default-system-state.js";
 
 type BuildStartupSystemStateOptions = {
   database: SqliteDatabase;
   emittedAt?: string;
   runtimeSessionId?: string;
+  screenpipeHealth?: ScreenpipeHealthProbe;
 };
 
 const sortPlansByImportedAt = <T extends { importedAt: string }>(plans: T[]): T[] =>
@@ -22,6 +27,7 @@ export const buildStartupSystemState = ({
   database,
   emittedAt = new Date().toISOString(),
   runtimeSessionId = randomUUID(),
+  screenpipeHealth,
 }: BuildStartupSystemStateOptions): SystemState => {
   const baseState = createDefaultSystemState();
   const dailyPlanRepo = new DailyPlanRepo(database);
@@ -30,7 +36,7 @@ export const buildStartupSystemState = ({
   const latestPlan = plans.at(-1) ?? null;
 
   if (latestPlan === null) {
-    return systemStateSchema.parse({
+    const systemState = systemStateSchema.parse({
       ...baseState,
       dashboard: {
         ...baseState.dashboard,
@@ -66,6 +72,10 @@ export const buildStartupSystemState = ({
       mode: "no_plan",
       runtime_session_id: runtimeSessionId,
     });
+
+    return screenpipeHealth === undefined
+      ? systemState
+      : applyScreenpipeHealthToSystemState(systemState, screenpipeHealth);
   }
 
   const plannedTasks = taskRepo
@@ -82,7 +92,7 @@ export const buildStartupSystemState = ({
       total_remaining_effort_seconds: task.totalRemainingEffortSeconds,
     }));
 
-  return systemStateSchema.parse({
+  const systemState = systemStateSchema.parse({
     ...baseState,
     dashboard: {
       ...baseState.dashboard,
@@ -115,4 +125,8 @@ export const buildStartupSystemState = ({
     mode: "running",
     runtime_session_id: runtimeSessionId,
   });
+
+  return screenpipeHealth === undefined
+    ? systemState
+    : applyScreenpipeHealthToSystemState(systemState, screenpipeHealth);
 };

@@ -12,6 +12,16 @@ export {
 } from "./server/bridge-server.js";
 
 export {
+  applyScreenpipeHealthToSystemState,
+  createScreenpipeClient,
+} from "./screenpipe/client.js";
+
+export type {
+  ScreenpipeClient,
+  ScreenpipeHealthProbe,
+} from "./screenpipe/client.js";
+
+export {
   isFeatureFlagEnabled,
   loadRuntimeConfig,
 } from "./config/runtime-config.js";

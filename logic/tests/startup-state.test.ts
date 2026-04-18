@@ -88,4 +88,28 @@ describe("buildStartupSystemState", () => {
     expect(systemState.dashboard.plan?.tasks).toHaveLength(1);
     expect(systemState.menu_bar.allowed_actions.can_pause).toBe(true);
   });
+
+  it("enters degraded_screenpipe mode when startup detects an unhealthy Screenpipe dependency", () => {
+    const database = createDatabase();
+
+    const systemState = buildStartupSystemState({
+      database,
+      emittedAt: "2026-04-18T08:00:00Z",
+      runtimeSessionId: "d7d724cd-0e26-432e-91eb-c283725b6922",
+      screenpipeHealth: {
+        checkedAt: "2026-04-18T08:00:00Z",
+        details: { error: "timeout" },
+        httpStatus: null,
+        lastErrorAt: "2026-04-18T08:00:00Z",
+        lastOkAt: null,
+        message: "Screenpipe health probe timed out after 5000ms.",
+        status: "down",
+        url: "http://127.0.0.1:3030/health",
+      },
+    });
+
+    expect(systemState.mode).toBe("degraded_screenpipe");
+    expect(systemState.system_health.screenpipe.status).toBe("down");
+    expect(systemState.dashboard.header.warning_banner?.title).toBe("Screenpipe degraded");
+  });
 });
