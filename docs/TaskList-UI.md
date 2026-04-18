@@ -65,7 +65,7 @@ This task list reflects the tightened V1 MVP architecture:
 - [x] Add keyboard shortcuts, accessibility labels, timeout/auto-dismiss behavior, and stale-state handling for the Clarification HUD and notification responses.
 
 **Phase 5: Evening Flow & Review UI**
-- [ ] Replicate the Morning Flow setup: Create `EveningDebriefView`, mount the TS-generated debrief payload, provide a `Copy` mechanism. 
-- [ ] Add the paste receptacle for ChatGPT's response, run the Paste Sanitizer logic over it, and trigger the evening `import_coaching_exchange` command submission.
-- [ ] Show a review/confirmation step explaining what evening data will be stored before final import acceptance.
-- [ ] Supply a very simple table UI rendering proposals trapped in `SystemState.dashboard.reviewQueue`. Implement simple Checkbox selection for promoting/rejecting new Durable Rules logic changes.
+- [x] Replicate the Morning Flow setup: Create `EveningDebriefView`, mount the TS-generated debrief payload, provide a `Copy` mechanism. 
+- [x] Add the paste receptacle for ChatGPT's response, run the Paste Sanitizer logic over it, and trigger the evening `import_coaching_exchange` command submission.
+- [x] Show a review/confirmation step explaining what evening data will be stored before final import acceptance.
+- [x] Supply a very simple table UI rendering proposals trapped in `SystemState.dashboard.reviewQueue`. Implement simple Checkbox selection for promoting/rejecting new Durable Rules logic changes.

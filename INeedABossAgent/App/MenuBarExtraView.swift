@@ -241,6 +241,18 @@ struct MenuBarExtraView: View {
         }
       )
 
+      EveningDebriefView(
+        eveningExchange: appStateStore.promptImportState.eveningExchange,
+        onImport: { payload in
+          do {
+            let result = try await bridgeClient.dispatchCommand(payload)
+            return MorningFlowPresenter.importOutcome(from: result)
+          } catch {
+            return MorningFlowPresenter.importOutcome(from: error)
+          }
+        }
+      )
+
       DiagnosticsView(
         systemHealth: appStateStore.dashboardState.systemHealth,
         connectionState: bridgeClient.connectionState,

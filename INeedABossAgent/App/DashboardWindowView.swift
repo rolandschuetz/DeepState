@@ -257,6 +257,11 @@ final class LaunchAtLoginController: ObservableObject {
   }
 }
 
+private enum ReviewDecision {
+  case promote
+  case reject
+}
+
 struct DashboardWindowView: View {
   @ObservedObject var bridgeClient: BridgeClient
   @ObservedObject var appStateStore: AppStateStore
@@ -266,6 +271,7 @@ struct DashboardWindowView: View {
   @State private var isDeleteDisclosureExpanded = false
   @State private var isDeleteConfirmationExpanded = false
   @State private var purgeConfirmPhrase = ""
+  @State private var reviewSelections: [String: ReviewDecision] = [:]
 
   var body: some View {
     Group {
@@ -651,16 +657,64 @@ struct DashboardWindowView: View {
           .font(.subheadline)
           .foregroundStyle(.secondary)
       } else {
+        Text("Selections stay local until the bridge exposes a durable-rule review command.")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+
         ForEach(items, id: \.reviewItemId) { item in
-          QueueCard(
-            title: item.title,
-            detail: item.rationale,
-            timestampText: item.createdAt,
-            footerText: item.proposedRuleText
-          )
+          VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top) {
+              VStack(alignment: .leading, spacing: 4) {
+                Text(item.title)
+                  .font(.headline)
+
+                Text(item.rationale)
+                  .font(.subheadline)
+
+                Text(item.proposedRuleText)
+                  .font(.caption)
+                  .foregroundStyle(.secondary)
+              }
+
+              Spacer()
+
+              VStack(alignment: .leading, spacing: 6) {
+                Toggle(
+                  "Promote",
+                  isOn: reviewBinding(for: item.reviewItemId, decision: .promote)
+                )
+
+                Toggle(
+                  "Reject",
+                  isOn: reviewBinding(for: item.reviewItemId, decision: .reject)
+                )
+              }
+              .toggleStyle(.checkbox)
+            }
+
+            Text(item.createdAt)
+              .font(.caption)
+              .foregroundStyle(.secondary)
+          }
+          .padding(12)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .background(Color(nsColor: .controlBackgroundColor))
+          .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
       }
     }
+  }
+
+  private func reviewBinding(
+    for reviewItemId: String,
+    decision: ReviewDecision
+  ) -> Binding<Bool> {
+    Binding(
+      get: { reviewSelections[reviewItemId] == decision },
+      set: { isSelected in
+        reviewSelections[reviewItemId] = isSelected ? decision : nil
+      }
+    )
   }
 
   private func recentEventsSection(_ dashboard: DashboardViewModel) -> some View {
