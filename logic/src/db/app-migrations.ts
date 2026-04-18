@@ -364,8 +364,103 @@ export const observationAppMigrations: SqliteMigration[] = [
   },
 ];
 
+export const learningAppMigrations: SqliteMigration[] = [
+  {
+    name: "create daily_memory_notes table",
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE daily_memory_notes (
+          note_id TEXT PRIMARY KEY,
+          local_date TEXT NOT NULL,
+          summary_text TEXT NOT NULL,
+          source TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        );
+
+        CREATE INDEX daily_memory_notes_local_date_idx
+          ON daily_memory_notes (local_date DESC);
+      `);
+    },
+    version: 400,
+  },
+  {
+    name: "create durable_rules table",
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE durable_rules (
+          rule_id TEXT PRIMARY KEY,
+          source TEXT NOT NULL,
+          rule_text TEXT NOT NULL,
+          confidence REAL NOT NULL,
+          recency INTEGER NOT NULL DEFAULT 0 CHECK (recency >= 0),
+          last_validated_at TEXT,
+          created_at TEXT NOT NULL
+        );
+
+        CREATE INDEX durable_rules_last_validated_idx
+          ON durable_rules (last_validated_at DESC);
+      `);
+    },
+    version: 410,
+  },
+  {
+    name: "create user_corrections table",
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE user_corrections (
+          correction_id TEXT PRIMARY KEY,
+          correction_kind TEXT NOT NULL,
+          related_entity_id TEXT,
+          summary_text TEXT NOT NULL,
+          payload_json TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        );
+
+        CREATE INDEX user_corrections_created_at_idx
+          ON user_corrections (created_at DESC);
+      `);
+    },
+    version: 420,
+  },
+  {
+    name: "create signal_weights table",
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE signal_weights (
+          signal_key TEXT PRIMARY KEY,
+          weight REAL NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+      `);
+    },
+    version: 430,
+  },
+  {
+    name: "create rule_proposals table",
+    up: (database) => {
+      database.exec(`
+        CREATE TABLE rule_proposals (
+          proposal_id TEXT PRIMARY KEY,
+          proposal_text TEXT NOT NULL,
+          rationale TEXT NOT NULL,
+          status TEXT NOT NULL
+            CHECK (status IN ('pending', 'accepted', 'dismissed')),
+          source TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          reviewed_at TEXT
+        );
+
+        CREATE INDEX rule_proposals_status_created_idx
+          ON rule_proposals (status, created_at DESC);
+      `);
+    },
+    version: 440,
+  },
+];
+
 export const appMigrations: SqliteMigration[] = [
   ...baseAppMigrations,
   ...planningAppMigrations,
   ...observationAppMigrations,
+  ...learningAppMigrations,
 ];
