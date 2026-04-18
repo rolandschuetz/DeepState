@@ -258,12 +258,14 @@ export const createLogicRuntime = (
   seedDefaultPrivacyExclusions(database);
 
   const screenpipeClient = createScreenpipeClient({
+    authToken: config.screenpipeApiKey,
     baseUrl: config.screenpipeBaseUrl,
     fetch: fetchImpl,
     healthTimeoutMs: config.healthTimeouts.screenpipeMs,
   });
 
   const searchPoller = createScreenpipeSearchPoller({
+    authToken: config.screenpipeApiKey,
     baseUrl: config.screenpipeBaseUrl,
     fetch: fetchImpl,
     schedulerBudgetMs: config.scheduler.screenpipeSearchBudgetMs,
@@ -301,6 +303,12 @@ export const createLogicRuntime = (
   let fastTickLastRanAt: string | null = null;
   let slowTickLastRanAt: string | null = null;
   let slowTickCounter = 0;
+  let stickyScreenpipeSearchFailure: {
+    checkedAt: string;
+    httpStatus: number | null;
+    message: string;
+    url: string;
+  } | null = null;
 
   const lastHealthByComponent = new Map<HealthComponent, HealthStatus>();
 
@@ -319,6 +327,44 @@ export const createLogicRuntime = (
       },
     });
   };
+
+  const applyStickyScreenpipeSearchFailure = (
+    probe: ScreenpipeHealthProbe,
+  ): ScreenpipeHealthProbe => {
+    if (stickyScreenpipeSearchFailure === null) {
+      return probe;
+    }
+
+    return {
+      ...probe,
+      checkedAt: stickyScreenpipeSearchFailure.checkedAt,
+      details: {
+        health_probe: probe.details,
+        search_error: stickyScreenpipeSearchFailure.message,
+      },
+      httpStatus: stickyScreenpipeSearchFailure.httpStatus,
+      lastErrorAt: stickyScreenpipeSearchFailure.checkedAt,
+      message: stickyScreenpipeSearchFailure.message,
+      status: "degraded",
+      url: stickyScreenpipeSearchFailure.url,
+    };
+  };
+
+  const probeScreenpipe = async (
+    checkedAt?: string,
+  ): Promise<ScreenpipeHealthProbe> =>
+    applyStickyScreenpipeSearchFailure(
+      await screenpipeClient.probeHealth(checkedAt),
+    );
+
+  const extractHttpStatusFromError = (message: string): number | null => {
+    const match = message.match(/\bHTTP (\d{3})\b/i);
+
+    return match === null ? null : Number(match[1]);
+  };
+
+  const isScreenpipeAuthFailure = (message: string): boolean =>
+    /\bHTTP (401|403)\b/i.test(message) || /\bunauthorized\b/i.test(message);
 
   const recordDatabaseTransition = (status: "ok" | "down", message: string): void => {
     recordTransitionIfChanged({
@@ -558,7 +604,7 @@ export const createLogicRuntime = (
 
   const buildInitialState = async (): Promise<SystemState> => {
     const base = buildStartupSystemState({ database });
-    lastScreenpipeProbe = await screenpipeClient.probeHealth();
+    lastScreenpipeProbe = await probeScreenpipe();
     const ollamaProbe = await ollamaClient.probe();
     void screenpipeClient.detectCapabilities(undefined, screenpipeLogger);
     recordScreenpipeTransition(lastScreenpipeProbe);
@@ -642,11 +688,118 @@ export const createLogicRuntime = (
     return Promise.resolve(systemState);
   };
 
+  const processRunningPlanLiveState = async ({
+    milestoneScanEnabled,
+    nowIso,
+  }: {
+    milestoneScanEnabled: boolean;
+    nowIso: string;
+  }): Promise<SystemState> => {
+    if (currentState.mode !== "running" || currentState.dashboard.plan === null) {
+      return finalizeSystemState({
+        database,
+        fastTickLastRanAt,
+        screenpipeProbe: lastScreenpipeProbe,
+        slowTickLastRanAt,
+        systemState: currentState,
+      });
+    }
+
+    const planId = currentState.dashboard.plan.plan_id;
+    const classificationPass = await classifyPendingWindows({
+      nowIso,
+      planId,
+    });
+    const tasks = new TaskRepo(database)
+      .listAll()
+      .filter((task) => task.planId === planId);
+    const focusBlocks = new FocusBlockRepo(database)
+      .listAll()
+      .filter((block) => block.planId === planId);
+
+    if (classificationPass.classifiedWindows.length > 0) {
+      const latestClassifiedWindow =
+        classificationPass.classifiedWindows[classificationPass.classifiedWindows.length - 1] ?? null;
+      const phase5Result = runPhase5SlowTick({
+        classificationId: classificationPass.latestClassificationId,
+        classificationRuntimeState: classificationPass.latestRuntimeState,
+        classifiedWindows: classificationPass.classifiedWindows,
+        database,
+        estimatedAtIso: nowIso,
+        focusBlocks,
+        lastGoodContext: classificationMemory.lastGoodContext,
+        localDayStartMs: localDayStartMs(currentState.dashboard.plan.local_date),
+        memory: phase5Memory,
+        milestoneScanEnabled,
+        mode: currentState.mode,
+        notificationPermissionGranted:
+          currentState.system_health.notifications.os_permission === "granted",
+        nowIso,
+        nowMs: Date.parse(nowIso),
+        paused: false,
+        planId,
+        taskForMilestoneInference:
+          latestClassifiedWindow?.matchedTaskId === null
+            ? null
+            : (tasks.find((task) => task.taskId === latestClassifiedWindow?.matchedTaskId) ?? null),
+        taskTitle:
+          latestClassifiedWindow?.matchedTaskId === null
+            ? null
+            : (tasks.find((task) => task.taskId === latestClassifiedWindow?.matchedTaskId)?.title ?? null),
+        tasks,
+        phase7: {
+          ambiguityCooldownActive: false,
+          currentWindow: classificationPass.latestWindow,
+          isLockedBoundary: false,
+          relatedEpisodeId: null,
+          slowTickDurationMs: config.scheduler.slowTickMs,
+          tasksForHud: tasks.map((task) => ({
+            taskId: task.taskId,
+            title: task.title,
+          })),
+        },
+      });
+      phase5Memory = phase5Result.memory;
+
+      if (phase5Result.decision.intervention !== null) {
+        interventionLogger.info("Intervention created from live classification.", {
+          kind: phase5Result.decision.intervention.kind,
+          source_classification_id: phase5Result.decision.intervention.sourceClassificationId,
+        });
+      }
+
+      if (classificationPass.subtitle !== null && phase5Result.pendingClarification !== null) {
+        database.prepare(
+          `
+            UPDATE pending_clarifications
+            SET hud_json = json_set(hud_json, '$.subtitle', ?)
+            WHERE clarification_id = ?
+          `,
+        ).run(classificationPass.subtitle, phase5Result.pendingClarification.clarificationId);
+      }
+    }
+
+    const rebuilt = buildStartupSystemState({
+      database,
+      emittedAt: nowIso,
+      runtimeSessionId: currentState.runtime_session_id,
+      screenpipeHealth: lastScreenpipeProbe,
+    });
+
+    return finalizeSystemState({
+      database,
+      fastTickLastRanAt,
+      screenpipeProbe: lastScreenpipeProbe,
+      slowTickLastRanAt,
+      systemState: rebuilt,
+    });
+  };
+
   const runFastTick = async (): Promise<void> => {
     const tickAt = new Date().toISOString();
     schedulerLogger.debug("Fast tick started.", { tick_at: tickAt });
 
-    lastScreenpipeProbe = await screenpipeClient.probeHealth();
+    lastScreenpipeProbe = await probeScreenpipe();
     recordScreenpipeTransition(lastScreenpipeProbe);
 
     const ingest = await runFastTickIngest({
@@ -666,24 +819,45 @@ export const createLogicRuntime = (
         });
         recordSchedulerTransition("degraded", "Screenpipe ingest exceeded scheduler budget.");
       } else {
-        screenpipeLogger.warn("Fast tick ingest failed.", {
-          message: ingest.ingestError.message,
-        });
-        lastScreenpipeProbe = await screenpipeClient.probeHealth();
-        recordScreenpipeTransition(lastScreenpipeProbe, { ingest_error: ingest.ingestError.message });
+        if (isScreenpipeAuthFailure(ingest.ingestError.message)) {
+          stickyScreenpipeSearchFailure = {
+            checkedAt: tickAt,
+            httpStatus: extractHttpStatusFromError(ingest.ingestError.message),
+            message:
+              config.screenpipeApiKey === null
+                ? "Screenpipe search requires API authentication. Add your Screenpipe API key in Settings."
+                : "Screenpipe rejected the configured API key. Update it in Settings.",
+            url: `${config.screenpipeBaseUrl}/search`,
+          };
+          lastScreenpipeProbe = applyStickyScreenpipeSearchFailure(lastScreenpipeProbe);
+          screenpipeLogger.warn("Fast tick ingest blocked by Screenpipe authentication.", {
+            message: ingest.ingestError.message,
+          });
+          recordSchedulerTransition("degraded", stickyScreenpipeSearchFailure.message);
+          recordScreenpipeTransition(lastScreenpipeProbe, {
+            ingest_error: ingest.ingestError.message,
+          });
+        } else {
+          screenpipeLogger.warn("Fast tick ingest failed.", {
+            message: ingest.ingestError.message,
+          });
+          lastScreenpipeProbe = await probeScreenpipe();
+          recordScreenpipeTransition(lastScreenpipeProbe, {
+            ingest_error: ingest.ingestError.message,
+          });
+        }
       }
     } else {
+      stickyScreenpipeSearchFailure = null;
+      lastScreenpipeProbe = await probeScreenpipe(tickAt);
       recordSchedulerTransition("ok", "Fast tick completed.");
     }
 
     fastTickLastRanAt = tickAt;
 
-    const next = finalizeSystemState({
-      database,
-      fastTickLastRanAt,
-      screenpipeProbe: lastScreenpipeProbe,
-      slowTickLastRanAt,
-      systemState: currentState,
+    const next = await processRunningPlanLiveState({
+      milestoneScanEnabled: false,
+      nowIso: tickAt,
     });
 
     publish({
@@ -712,7 +886,7 @@ export const createLogicRuntime = (
     const tickAt = new Date().toISOString();
     schedulerLogger.info("Slow tick started.", { tick_at: tickAt });
 
-    lastScreenpipeProbe = await screenpipeClient.probeHealth();
+    lastScreenpipeProbe = await probeScreenpipe();
     recordScreenpipeTransition(lastScreenpipeProbe);
 
     const dbStatus = probeDatabaseStatus(database);
@@ -729,102 +903,10 @@ export const createLogicRuntime = (
       });
     }
 
-    let next = finalizeSystemState({
-      database,
-      fastTickLastRanAt,
-      screenpipeProbe: lastScreenpipeProbe,
-      slowTickLastRanAt,
-      systemState: currentState,
+    const next = await processRunningPlanLiveState({
+      milestoneScanEnabled: true,
+      nowIso: tickAt,
     });
-
-    if (currentState.mode === "running" && currentState.dashboard.plan !== null) {
-      const classificationPass = await classifyPendingWindows({
-        nowIso: tickAt,
-        planId: currentState.dashboard.plan.plan_id,
-      });
-      const tasks = new TaskRepo(database)
-        .listAll()
-        .filter((task) => task.planId === currentState.dashboard.plan?.plan_id);
-      const focusBlocks = new FocusBlockRepo(database)
-        .listAll()
-        .filter((block) => block.planId === currentState.dashboard.plan?.plan_id);
-
-      if (classificationPass.classifiedWindows.length > 0) {
-        const latestClassifiedWindow =
-          classificationPass.classifiedWindows[classificationPass.classifiedWindows.length - 1] ?? null;
-        const phase5Result = runPhase5SlowTick({
-          classificationId: classificationPass.latestClassificationId,
-          classificationRuntimeState: classificationPass.latestRuntimeState,
-          classifiedWindows: classificationPass.classifiedWindows,
-          database,
-          estimatedAtIso: tickAt,
-          focusBlocks,
-          lastGoodContext: classificationMemory.lastGoodContext,
-          localDayStartMs: localDayStartMs(currentState.dashboard.plan.local_date),
-          memory: phase5Memory,
-          milestoneScanEnabled: true,
-          mode: currentState.mode,
-          notificationPermissionGranted:
-            currentState.system_health.notifications.os_permission === "granted",
-          nowIso: tickAt,
-          nowMs: Date.parse(tickAt),
-          paused: false,
-          planId: currentState.dashboard.plan.plan_id,
-          taskForMilestoneInference:
-            latestClassifiedWindow?.matchedTaskId === null
-              ? null
-              : (tasks.find((task) => task.taskId === latestClassifiedWindow?.matchedTaskId) ?? null),
-          taskTitle:
-            latestClassifiedWindow?.matchedTaskId === null
-              ? null
-              : (tasks.find((task) => task.taskId === latestClassifiedWindow?.matchedTaskId)?.title ?? null),
-          tasks,
-          phase7: {
-            ambiguityCooldownActive: false,
-            currentWindow: classificationPass.latestWindow,
-            isLockedBoundary: false,
-            relatedEpisodeId: null,
-            slowTickDurationMs: config.scheduler.slowTickMs,
-            tasksForHud: tasks.map((task) => ({
-              taskId: task.taskId,
-              title: task.title,
-            })),
-          },
-        });
-        phase5Memory = phase5Result.memory;
-
-        if (phase5Result.decision.intervention !== null) {
-          interventionLogger.info("Intervention created from live classification.", {
-            kind: phase5Result.decision.intervention.kind,
-            source_classification_id: phase5Result.decision.intervention.sourceClassificationId,
-          });
-        }
-
-        if (classificationPass.subtitle !== null && phase5Result.pendingClarification !== null) {
-          database.prepare(
-            `
-              UPDATE pending_clarifications
-              SET hud_json = json_set(hud_json, '$.subtitle', ?)
-              WHERE clarification_id = ?
-            `,
-          ).run(classificationPass.subtitle, phase5Result.pendingClarification.clarificationId);
-        }
-      }
-
-      next = buildStartupSystemState({
-        database,
-        emittedAt: tickAt,
-        runtimeSessionId: currentState.runtime_session_id,
-        screenpipeHealth: lastScreenpipeProbe,
-      });
-      next = finalizeSystemState({
-        database,
-        fastTickLastRanAt,
-        screenpipeProbe: lastScreenpipeProbe,
-        slowTickLastRanAt,
-        systemState: next,
-      });
-    }
 
     publish({
       ...next,
@@ -888,7 +970,7 @@ export const createLogicRuntime = (
 
           purgeAllAppData(database);
           seedDefaultPrivacyExclusions(database);
-          lastScreenpipeProbe = await screenpipeClient.probeHealth();
+          lastScreenpipeProbe = await probeScreenpipe();
           let next = buildStartupSystemState({
             database,
             screenpipeHealth: lastScreenpipeProbe,
@@ -985,7 +1067,7 @@ export const createLogicRuntime = (
         }
 
         case "resume": {
-          lastScreenpipeProbe = await screenpipeClient.probeHealth();
+          lastScreenpipeProbe = await probeScreenpipe();
           let next = applyResumeToSystemState({
             causedByCommandId: command.command_id,
             currentState,

@@ -31,6 +31,7 @@ export type ScreenpipeSearchPollResult = {
 };
 
 export type CreateScreenpipeSearchPollerOptions = {
+  authToken?: string | null;
   baseUrl: string;
   fetch?: typeof globalThis.fetch;
   initialLookbackMs?: number;
@@ -71,6 +72,35 @@ const parseResponsePayload = async (response: Response): Promise<unknown> =>
   response.headers.get("content-type")?.includes("application/json")
     ? await response.json()
     : await response.text();
+
+const buildAuthHeaders = (
+  authToken: string | null | undefined,
+): Record<string, string> =>
+  authToken === null || authToken === undefined || authToken.length === 0
+    ? {}
+    : { Authorization: `Bearer ${authToken}` };
+
+const extractErrorMessage = (payload: unknown): string | null => {
+  if (typeof payload === "string") {
+    const trimmed = payload.trim();
+
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  if (!isPlainObject(payload)) {
+    return null;
+  }
+
+  for (const key of ["error", "message", "detail"]) {
+    const value = payload[key];
+
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+
+  return null;
+};
 
 const extractSearchRecords = (payload: unknown): unknown[] => {
   if (Array.isArray(payload)) {
@@ -227,6 +257,7 @@ export class ScreenpipeSchedulerBudgetExceededError extends Error {
 }
 
 export const createScreenpipeSearchPoller = ({
+  authToken = null,
   baseUrl,
   fetch: fetchImpl = globalThis.fetch,
   initialLookbackMs = DEFAULT_INITIAL_LOOKBACK_MS,
@@ -264,6 +295,7 @@ export const createScreenpipeSearchPoller = ({
 
       try {
         response = await fetchImpl(`${normalizedBaseUrl}/search?${query.toString()}`, {
+          headers: buildAuthHeaders(authToken),
           method: "GET",
           ...(abortController === null ? {} : { signal: abortController.signal }),
         });
@@ -283,11 +315,17 @@ export const createScreenpipeSearchPoller = ({
         }
       }
 
+      const payload = await parseResponsePayload(response);
+
       if (!response.ok) {
-        throw new Error(`Screenpipe /search failed with HTTP ${response.status}.`);
+        const errorMessage = extractErrorMessage(payload);
+        throw new Error(
+          errorMessage === null
+            ? `Screenpipe /search failed with HTTP ${response.status}.`
+            : `Screenpipe /search failed with HTTP ${response.status}: ${errorMessage}`,
+        );
       }
 
-      const payload = await parseResponsePayload(response);
       const partialFromPayload = hasTruthyBooleanField(payload, [
         "partial",
         "is_partial",

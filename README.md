@@ -4,6 +4,8 @@ DeepState is a local-first macOS focus coach for people who do knowledge work on
 
 The app is designed to act more like a calm "boss" or coach than a timer or blocker. Instead of simply tracking app usage, it tries to understand what you said you wanted to work on, compare that plan against your current context, and nudge you only when it has enough evidence to do so.
 
+![DeepState header](./header.jpg)
+
 ## What The App Is For
 
 The core use case is:

@@ -48,6 +48,17 @@ const tokenize = (value: string): string[] =>
 
 const unique = <T>(values: T[]): T[] => [...new Set(values)];
 
+const IMMEDIATE_DISTRACTION_CODE = "known_distraction_linkedin";
+
+const isLinkedInDistraction = (
+  window: AggregatedContextWindow,
+  contextTokens: string[],
+): boolean =>
+  contextTokens.includes("linkedin") ||
+  window.summary.urls.some((url) => /:\/\/(?:www\.)?linkedin\.com\b/i.test(url)) ||
+  window.summary.windowTitles.some((title) => /\blinkedin\b/i.test(title)) ||
+  window.summary.activeApps.some((app) => /\blinkedin\b/i.test(app));
+
 const buildContextTokens = (window: AggregatedContextWindow): string[] =>
   unique([
     ...window.summary.activeApps.flatMap(tokenize),
@@ -171,6 +182,25 @@ export const classifyContextWindow = ({
         .reduce((total, item) => total + item.weight, 0),
   );
 
+  if (isLinkedInDistraction(window, contextTokens) && (best?.score ?? 0) < 0.3) {
+    explainability.push({
+      code: IMMEDIATE_DISTRACTION_CODE,
+      detail: "LinkedIn was detected in the active context and treated as a distraction.",
+      weight: -0.9,
+    });
+
+    return {
+      confidenceRatio: clampRatio(Math.max(weightedScore, 0.9)),
+      desiredState: "hard_drift",
+      explainability,
+      isSupport: false,
+      lastGoodContext: previousLastGoodContext,
+      matchedGoalId: null,
+      matchedTaskId: null,
+      runtimeState: "hard_drift",
+    };
+  }
+
   if (best !== null && weightedScore >= 0.5) {
     const recoveryAnchor = buildRecoveryAnchor(window) ?? previousLastGoodContext;
 
@@ -239,13 +269,22 @@ export const applyClassificationHysteresis = ({
     nextMemory.driftStreak += 1;
     nextState = nextMemory.driftStreak >= 2 ? "soft_drift" : memory.previousRuntimeState;
   } else if (classification.desiredState === "hard_drift") {
-    nextMemory.driftStreak += 1;
-    nextState =
-      nextMemory.driftStreak >= 3
-        ? "hard_drift"
-        : nextMemory.driftStreak >= 2
-          ? "soft_drift"
-          : memory.previousRuntimeState;
+    const isImmediateDistraction = classification.explainability.some(
+      (item) => item.code === IMMEDIATE_DISTRACTION_CODE,
+    );
+
+    if (isImmediateDistraction) {
+      nextMemory.driftStreak = 3;
+      nextState = "hard_drift";
+    } else {
+      nextMemory.driftStreak += 1;
+      nextState =
+        nextMemory.driftStreak >= 3
+          ? "hard_drift"
+          : nextMemory.driftStreak >= 2
+            ? "soft_drift"
+            : memory.previousRuntimeState;
+    }
   } else {
     nextState = "uncertain";
   }

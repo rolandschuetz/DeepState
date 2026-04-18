@@ -32,6 +32,7 @@ describe("createScreenpipeClient", () => {
     const firstCall = fetchImpl.mock.calls[0];
     expect(firstCall).toBeDefined();
     expect(firstCall?.[0]).toBe("http://127.0.0.1:3030/health");
+    expect(firstCall?.[1]?.headers).toEqual({});
     expect(firstCall?.[1]?.method).toBe("GET");
     expect(firstCall?.[1]?.signal).toBeInstanceOf(AbortSignal);
     expect(probe).toEqual({
@@ -43,6 +44,29 @@ describe("createScreenpipeClient", () => {
       message: "Screenpipe health probe succeeded.",
       status: "ok",
       url: "http://127.0.0.1:3030/health",
+    });
+  });
+
+  it("sends the configured bearer token to Screenpipe endpoints", async () => {
+    const fetchImpl = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response(JSON.stringify({ status: "ok" }), {
+        headers: {
+          "content-type": "application/json",
+        },
+        status: 200,
+      }))
+    );
+    const client = createScreenpipeClient({
+      authToken: "sp-test-key",
+      baseUrl: "http://127.0.0.1:3030/",
+      fetch: fetchImpl,
+      healthTimeoutMs: 5_000,
+    });
+
+    await client.probeHealth("2026-04-18T10:00:00Z");
+
+    expect(fetchImpl.mock.calls[0]?.[1]?.headers).toEqual({
+      Authorization: "Bearer sp-test-key",
     });
   });
 

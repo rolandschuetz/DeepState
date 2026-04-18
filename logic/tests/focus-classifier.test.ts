@@ -155,6 +155,36 @@ describe("focus classifier", () => {
     );
   });
 
+  it("treats LinkedIn browsing as immediate hard drift when the task does not justify it", () => {
+    const window = getSingleWindow([
+      createEvidence({
+        appIdentifier: "com.google.Chrome",
+        appName: "Google Chrome",
+        keywords: ["linkedin", "feed", "network"],
+        uiText: ["LinkedIn", "Start a post"],
+        url: "https://www.linkedin.com/feed/",
+        urlSummary: {
+          host: "www.linkedin.com",
+          normalizedUrl: "https://www.linkedin.com/feed",
+          pathTokens: ["feed"],
+        },
+        windowTitle: "LinkedIn",
+      }),
+    ]);
+
+    const classification = classifyContextWindow({
+      previousLastGoodContext: "checkout.ts - INeedABossAgent",
+      tasks: TASKS,
+      window,
+    });
+
+    expect(classification.runtimeState).toBe("hard_drift");
+    expect(classification.explainability.map((item) => item.code)).toContain(
+      "known_distraction_linkedin",
+    );
+    expect(classification.lastGoodContext).toBe("checkout.ts - INeedABossAgent");
+  });
+
   it("applies hysteresis across replayed ticks for aligned to soft drift to recovery", () => {
     const alignedWindow = getSingleWindow([createEvidence()]);
     const driftWindowA = getSingleWindow([
@@ -218,5 +248,49 @@ describe("focus classifier", () => {
     expect(secondDrift.classification.runtimeState).toBe("soft_drift");
     expect(recovery.classification.runtimeState).toBe("aligned");
     expect(recovery.classification.lastGoodContext).toBe("checkout.ts - INeedABossAgent");
+  });
+
+  it("bypasses drift hysteresis for an explicit LinkedIn distraction", () => {
+    const alignedWindow = getSingleWindow([createEvidence()]);
+    const linkedInWindow = getSingleWindow([
+      createEvidence({
+        appIdentifier: "com.google.Chrome",
+        appName: "Google Chrome",
+        keywords: ["linkedin", "feed"],
+        uiText: ["LinkedIn", "Home"],
+        url: "https://www.linkedin.com/feed/",
+        urlSummary: {
+          host: "www.linkedin.com",
+          normalizedUrl: "https://www.linkedin.com/feed",
+          pathTokens: ["feed"],
+        },
+        windowTitle: "LinkedIn",
+      }),
+    ]);
+
+    let memory: HysteresisMemory = {
+      driftStreak: 0,
+      lastGoodContext: null,
+      previousRuntimeState: "uncertain",
+    };
+
+    const aligned = applyClassificationHysteresis({
+      classification: classifyContextWindow({ tasks: TASKS, window: alignedWindow }),
+      memory,
+    });
+    memory = aligned.memory;
+
+    const distraction = applyClassificationHysteresis({
+      classification: classifyContextWindow({
+        previousLastGoodContext: memory.lastGoodContext,
+        tasks: TASKS,
+        window: linkedInWindow,
+      }),
+      memory,
+    });
+
+    expect(aligned.classification.runtimeState).toBe("aligned");
+    expect(distraction.classification.runtimeState).toBe("hard_drift");
+    expect(distraction.memory.driftStreak).toBe(3);
   });
 });

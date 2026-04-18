@@ -56,6 +56,7 @@ describe("createScreenpipeSearchPoller", () => {
     expect(fetchImpl.mock.calls[0]?.[0]).toBe(
       "http://127.0.0.1:3030/search?end_time=2026-04-18T10%3A01%3A00Z&limit=10&start_time=2026-04-18T10%3A00%3A00.000Z",
     );
+    expect(fetchImpl.mock.calls[0]?.[1]?.headers).toEqual({});
     expect(result.requestWindow).toEqual({
       endAt: "2026-04-18T10:01:00Z",
       startAt: "2026-04-18T10:00:00.000Z",
@@ -234,5 +235,34 @@ describe("createScreenpipeSearchPoller", () => {
         endAt: "2026-04-18T10:01:00Z",
       }),
     ).rejects.toBeInstanceOf(ScreenpipeSchedulerBudgetExceededError);
+  });
+
+  it("sends the configured bearer token and preserves auth error details", async () => {
+    const fetchImpl = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response(JSON.stringify({
+        error: "unauthorized: API access requires authentication",
+      }), {
+        headers: {
+          "content-type": "application/json",
+        },
+        status: 403,
+      }))
+    );
+    const poller = createScreenpipeSearchPoller({
+      authToken: "sp-test-key",
+      baseUrl: "http://127.0.0.1:3030",
+      fetch: fetchImpl,
+    });
+
+    await expect(
+      poller.poll({
+        endAt: "2026-04-18T10:01:00Z",
+      }),
+    ).rejects.toThrow(
+      "Screenpipe /search failed with HTTP 403: unauthorized: API access requires authentication",
+    );
+    expect(fetchImpl.mock.calls[0]?.[1]?.headers).toEqual({
+      Authorization: "Bearer sp-test-key",
+    });
   });
 });

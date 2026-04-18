@@ -39,6 +39,7 @@ export type ScreenpipeClient = {
 };
 
 export type CreateScreenpipeClientOptions = {
+  authToken?: string | null;
   baseUrl: string;
   fetch?: typeof globalThis.fetch;
   healthTimeoutMs: number;
@@ -123,6 +124,13 @@ const parseJsonResponse = async (response: Response): Promise<unknown> =>
   response.headers.get("content-type")?.includes("application/json")
     ? await response.json()
     : await response.text();
+
+const buildAuthHeaders = (
+  authToken: string | null | undefined,
+): Record<string, string> =>
+  authToken === null || authToken === undefined || authToken.length === 0
+    ? {}
+    : { Authorization: `Bearer ${authToken}` };
 
 const detectAudioTranscriptAvailability = (value: unknown): boolean | null => {
   const transcriptValue = findFirstNestedValue(value, [
@@ -232,6 +240,7 @@ export const applyScreenpipeHealthToSystemState = (
   });
 
 export const createScreenpipeClient = ({
+  authToken = null,
   baseUrl,
   fetch: fetchImpl = globalThis.fetch,
   healthTimeoutMs,
@@ -249,6 +258,7 @@ export const createScreenpipeClient = ({
 
     try {
       const response = await fetchImpl(url, {
+        headers: buildAuthHeaders(authToken),
         method: "GET",
         signal: controller.signal,
       });
@@ -300,8 +310,14 @@ export const createScreenpipeClient = ({
   ): Promise<ScreenpipeCapabilities> => {
     const healthProbe = await probeHealth(checkedAt);
     const [elementsResponse, searchResponse] = await Promise.all([
-      fetchImpl(`${normalizedBaseUrl}/elements?limit=1`, { method: "GET" }),
-      fetchImpl(`${normalizedBaseUrl}/search?limit=1`, { method: "GET" }),
+      fetchImpl(`${normalizedBaseUrl}/elements?limit=1`, {
+        headers: buildAuthHeaders(authToken),
+        method: "GET",
+      }),
+      fetchImpl(`${normalizedBaseUrl}/search?limit=1`, {
+        headers: buildAuthHeaders(authToken),
+        method: "GET",
+      }),
     ]);
     const elementsDetails = await parseJsonResponse(elementsResponse);
     const searchDetails = await parseJsonResponse(searchResponse);
@@ -312,7 +328,10 @@ export const createScreenpipeClient = ({
     if (sampleFrameId !== null) {
       const frameContextResponse = await fetchImpl(
         `${normalizedBaseUrl}/frames/${sampleFrameId}/context`,
-        { method: "GET" },
+        {
+          headers: buildAuthHeaders(authToken),
+          method: "GET",
+        },
       );
 
       frameContextEndpointAvailable = frameContextResponse.ok;

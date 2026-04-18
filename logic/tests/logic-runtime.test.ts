@@ -67,6 +67,83 @@ const createMockFetch = (): typeof fetch => {
   return vi.fn(impl) as typeof fetch;
 };
 
+const createLinkedInDriftFetch = (): typeof fetch => {
+  const impl = (input: string | URL): Promise<Response> => {
+    const url = typeof input === "string" ? input : input.href;
+
+    if (url.includes("/health")) {
+      return Promise.resolve(
+        new Response(JSON.stringify(screenpipeHealthJson), { status: 200 }),
+      );
+    }
+
+    if (url.includes("/elements")) {
+      return Promise.resolve(
+        new Response(JSON.stringify({ data: [] }), { status: 200 }),
+      );
+    }
+
+    if (url.includes("/search")) {
+      return Promise.resolve(
+        new Response(JSON.stringify({
+          data: [
+            {
+              app_name: "Google Chrome",
+              id: "event_linkedin_1",
+              page_url: "https://www.linkedin.com/feed/",
+              timestamp: "2026-04-18T10:00:00Z",
+              window_title: "Feed | LinkedIn",
+            },
+          ],
+        }), { status: 200 }),
+      );
+    }
+
+    if (url.includes("/frames/")) {
+      return Promise.resolve(new Response(JSON.stringify({}), { status: 200 }));
+    }
+
+    return Promise.resolve(new Response("not found", { status: 404 }));
+  };
+
+  return vi.fn(impl) as typeof fetch;
+};
+
+const createScreenpipeAuthFailureFetch = (): typeof fetch => {
+  const impl = (input: string | URL): Promise<Response> => {
+    const url = typeof input === "string" ? input : input.href;
+
+    if (url.includes("/health")) {
+      return Promise.resolve(
+        new Response(JSON.stringify(screenpipeHealthJson), { status: 200 }),
+      );
+    }
+
+    if (url.includes("/elements")) {
+      return Promise.resolve(
+        new Response(JSON.stringify({ data: [] }), { status: 200 }),
+      );
+    }
+
+    if (url.includes("/search")) {
+      return Promise.resolve(
+        new Response(JSON.stringify({
+          error:
+            "unauthorized: API access requires authentication. Pass Authorization: Bearer <your-api-key>",
+        }), { status: 403 }),
+      );
+    }
+
+    if (url.includes("/frames/")) {
+      return Promise.resolve(new Response(JSON.stringify({}), { status: 200 }));
+    }
+
+    return Promise.resolve(new Response("not found", { status: 404 }));
+  };
+
+  return vi.fn(impl) as typeof fetch;
+};
+
 describe("createLogicRuntime", () => {
   let tempDir: string;
 
@@ -127,8 +204,10 @@ describe("createLogicRuntime", () => {
       method: "POST",
     });
     expect(importResponse.status).toBe(202);
+    await vi.advanceTimersByTimeAsync(0);
+    await Promise.resolve();
 
-    await vi.advanceTimersByTimeAsync(15_000);
+    await vi.advanceTimersByTimeAsync(30_000);
     await Promise.resolve();
 
     const afterFast = runtime.getState();
@@ -176,6 +255,117 @@ describe("createLogicRuntime", () => {
 
     const after = runtime.getState();
     expect(after.mode).toBe("no_plan");
+
+    await runtime.close();
+    vi.useRealTimers();
+  });
+
+  it("reacts on the fast tick when LinkedIn appears during a running plan", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-18T10:01:00Z"));
+
+    const fetchMock = createLinkedInDriftFetch();
+    const config = loadRuntimeConfig({
+      INEEDABOSSAGENT_DB_PATH: join(tempDir, "logic.sqlite"),
+      INEEDABOSSAGENT_FAST_TICK_MS: "15000",
+      INEEDABOSSAGENT_SLOW_TICK_MS: "90000",
+    });
+
+    const runtime = createLogicRuntime({ config, fetch: fetchMock });
+    const { host, port } = await runtime.listen(0, "127.0.0.1");
+    runtime.start();
+
+    await vi.advanceTimersByTimeAsync(0);
+    await Promise.resolve();
+
+    const importResponse = await fetch(`http://${host}:${port}/command`, {
+      body: JSON.stringify({
+        command_id: "c0000000-0000-4000-8000-000000000001",
+        kind: "import_coaching_exchange",
+        payload: {
+          raw_text: morningPlanJson,
+          source: "manual_paste",
+        },
+        schema_version: "1.0.0",
+        sent_at: "2026-04-18T09:00:00Z",
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    expect(importResponse.status).toBe(202);
+    await vi.advanceTimersByTimeAsync(0);
+    await Promise.resolve();
+
+    await vi.advanceTimersByTimeAsync(30_000);
+    await Promise.resolve();
+
+    const state = runtime.getState();
+    expect(state.mode).toBe("running");
+    expect(state.dashboard.current_focus.runtime_state).toBe("hard_drift");
+    expect(state.intervention?.kind).toBe("hard_drift");
+    expect(state.dashboard.current_focus.explainability.some((item) =>
+      item.code === "known_distraction_linkedin"
+    )).toBe(true);
+
+    await runtime.close();
+    vi.useRealTimers();
+  });
+
+  it("marks Screenpipe degraded when /search requires API authentication", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-18T10:01:00Z"));
+
+    const fetchMock = createScreenpipeAuthFailureFetch();
+    const config = loadRuntimeConfig({
+      INEEDABOSSAGENT_DB_PATH: join(tempDir, "logic.sqlite"),
+      INEEDABOSSAGENT_FAST_TICK_MS: "15000",
+      INEEDABOSSAGENT_SLOW_TICK_MS: "90000",
+    });
+
+    const runtime = createLogicRuntime({ config, fetch: fetchMock });
+    const { host, port } = await runtime.listen(0, "127.0.0.1");
+    runtime.start();
+
+    await vi.advanceTimersByTimeAsync(0);
+    await Promise.resolve();
+
+    const importResponse = await fetch(`http://${host}:${port}/command`, {
+      body: JSON.stringify({
+        command_id: "d0000000-0000-4000-8000-000000000001",
+        kind: "import_coaching_exchange",
+        payload: {
+          raw_text: morningPlanJson,
+          source: "manual_paste",
+        },
+        schema_version: "1.0.0",
+        sent_at: "2026-04-18T09:00:00Z",
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+    expect(importResponse.status).toBe(202);
+    await vi.advanceTimersByTimeAsync(0);
+    await Promise.resolve();
+
+    await vi.advanceTimersByTimeAsync(15_000);
+    await Promise.resolve();
+
+    const state = runtime.getState();
+    expect(state.mode).toBe("degraded_screenpipe");
+    expect(state.system_health.screenpipe.status).toBe("degraded");
+    expect(state.system_health.screenpipe.message).toContain(
+      "Screenpipe search requires API authentication",
+    );
+
+    const diagnosticsResponse = await fetch(`http://${host}:${port}/diagnostics`);
+    expect(diagnosticsResponse.status).toBe(200);
+    const diagnosticsBody = (await diagnosticsResponse.json()) as {
+      last_screenpipe_probe: { message: string; status: string };
+    };
+    expect(diagnosticsBody.last_screenpipe_probe.status).toBe("degraded");
+    expect(diagnosticsBody.last_screenpipe_probe.message).toContain(
+      "Screenpipe search requires API authentication",
+    );
 
     await runtime.close();
     vi.useRealTimers();

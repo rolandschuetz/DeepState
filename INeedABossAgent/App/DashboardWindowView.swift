@@ -266,12 +266,15 @@ struct DashboardWindowView: View {
   @ObservedObject var bridgeClient: BridgeClient
   @ObservedObject var appStateStore: AppStateStore
 
+  @AppStorage("screenpipeApiKey") private var screenpipeApiKey = ""
   @StateObject private var launchAtLogin = LaunchAtLoginController()
   @State private var isExplainabilityExpanded = true
   @State private var isDeleteDisclosureExpanded = false
   @State private var isDeleteConfirmationExpanded = false
+  @State private var isApplyingScreenpipeAccess = false
   @State private var purgeConfirmPhrase = ""
   @State private var reviewSelections: [String: ReviewDecision] = [:]
+  @State private var screenpipeAccessStatusText: String?
 
   var body: some View {
     Group {
@@ -428,6 +431,38 @@ struct DashboardWindowView: View {
         Button("Reveal Local Data Folder") {
           revealLocalDataFolder()
         }
+      }
+
+      SettingsCard(title: "Screenpipe Access") {
+        SecureField(
+          "Screenpipe API key",
+          text: Binding(
+            get: { screenpipeApiKey },
+            set: { screenpipeApiKey = $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+          )
+        )
+        .textFieldStyle(.roundedBorder)
+
+        Text(
+          "Required when Screenpipe local API auth is enabled. The key is stored only in this app container and passed to the embedded runtime for localhost requests."
+        )
+        .font(.caption)
+        .foregroundStyle(.secondary)
+
+        Button(isApplyingScreenpipeAccess ? "Applying..." : "Apply and reconnect") {
+          applyScreenpipeAccess()
+        }
+        .disabled(isApplyingScreenpipeAccess)
+
+        if let screenpipeAccessStatusText {
+          Text(screenpipeAccessStatusText)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+
+        Text("This restarts the embedded runtime and reconnects the bridge.")
+          .font(.caption)
+          .foregroundStyle(.secondary)
       }
 
       SettingsCard(title: "Launch at Login") {
@@ -907,6 +942,27 @@ struct DashboardWindowView: View {
     }
 
     NSWorkspace.shared.open(settingsURL)
+  }
+
+  private func applyScreenpipeAccess() {
+    let normalizedKey = screenpipeApiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+    screenpipeApiKey = normalizedKey
+    screenpipeAccessStatusText = nil
+    isApplyingScreenpipeAccess = true
+
+    Task {
+      bridgeClient.disconnect()
+      await EmbeddedLogicRuntimeController.shared.restartAndWaitUntilReady()
+      bridgeClient.connect()
+
+      await MainActor.run {
+        isApplyingScreenpipeAccess = false
+        screenpipeAccessStatusText =
+          normalizedKey.isEmpty
+          ? "Screenpipe key cleared. The runtime reconnected without API auth."
+          : "Screenpipe key saved. The embedded runtime reconnected with the updated key."
+      }
+    }
   }
 }
 

@@ -5,6 +5,10 @@ import Darwin
 final class EmbeddedLogicRuntimeController {
   static let shared = EmbeddedLogicRuntimeController()
 
+  private enum PreferenceKey {
+    static let screenpipeApiKey = "screenpipeApiKey"
+  }
+
   let bridgeConfiguration: BridgeConfiguration
 
   private let bridgeHost = "127.0.0.1"
@@ -108,6 +112,11 @@ final class EmbeddedLogicRuntimeController {
     }
   }
 
+  func restartAndWaitUntilReady() async {
+    stop()
+    await startAndWaitUntilReady()
+  }
+
   private func executableURL() -> URL? {
     runtimeDirectoryURL()?
       .appendingPathComponent("INeedABossAgentNode", isDirectory: false)
@@ -128,7 +137,21 @@ final class EmbeddedLogicRuntimeController {
     environment["INEEDABOSSAGENT_BRIDGE_HOST"] = bridgeHost
     environment["INEEDABOSSAGENT_BRIDGE_PORT"] = String(bridgePort)
     environment["INEEDABOSSAGENT_DB_PATH"] = databaseURL().path
+    if let screenpipeApiKey = resolvedScreenpipeApiKey() {
+      environment["INEEDABOSSAGENT_SCREENPIPE_API_KEY"] = screenpipeApiKey
+    }
     return environment
+  }
+
+  private func resolvedScreenpipeApiKey() -> String? {
+    let storedValue = UserDefaults.standard.string(forKey: PreferenceKey.screenpipeApiKey)?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+
+    guard let storedValue, storedValue.isEmpty == false else {
+      return nil
+    }
+
+    return storedValue
   }
 
   private func databaseURL() -> URL {

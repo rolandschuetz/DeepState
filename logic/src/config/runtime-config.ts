@@ -13,6 +13,7 @@ const runtimeConfigEnvSchema = z.object({
   INEEDABOSSAGENT_OLLAMA_BASE_URL: z.url().default("http://127.0.0.1:11434"),
   INEEDABOSSAGENT_OLLAMA_MODEL: z.string().min(1).default("gemma4:31b"),
   INEEDABOSSAGENT_OLLAMA_TIMEOUT_MS: z.coerce.number().int().min(1_000).default(15_000),
+  INEEDABOSSAGENT_SCREENPIPE_API_KEY: z.string().default(""),
   INEEDABOSSAGENT_SCREENPIPE_BASE_URL: z.url().default("http://127.0.0.1:3030"),
   INEEDABOSSAGENT_SCREENPIPE_HEALTH_TIMEOUT_MS: z.coerce.number().int().positive().default(5_000),
   INEEDABOSSAGENT_SCREENPIPE_SEARCH_BUDGET_MS: z.coerce.number().int().min(1_000).default(12_000),
@@ -39,6 +40,7 @@ export type RuntimeConfig = {
     slowTickMs: number;
     screenpipeSearchBudgetMs: number;
   };
+  screenpipeApiKey: string | null;
   screenpipeBaseUrl: string;
 };
 
@@ -70,6 +72,10 @@ export const loadRuntimeConfig = (
       screenpipeSearchBudgetMs: parsed.INEEDABOSSAGENT_SCREENPIPE_SEARCH_BUDGET_MS,
       slowTickMs: parsed.INEEDABOSSAGENT_SLOW_TICK_MS,
     },
+    screenpipeApiKey:
+      parsed.INEEDABOSSAGENT_SCREENPIPE_API_KEY.trim().length > 0
+        ? parsed.INEEDABOSSAGENT_SCREENPIPE_API_KEY.trim()
+        : null,
     screenpipeBaseUrl: parsed.INEEDABOSSAGENT_SCREENPIPE_BASE_URL.replace(/\/+$/, ""),
   };
 };

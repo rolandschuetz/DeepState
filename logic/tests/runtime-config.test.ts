@@ -31,6 +31,7 @@ describe("loadRuntimeConfig", () => {
         screenpipeSearchBudgetMs: 12_000,
         slowTickMs: 90_000,
       },
+      screenpipeApiKey: null,
       screenpipeBaseUrl: "http://127.0.0.1:3030",
     });
   });
@@ -42,6 +43,7 @@ describe("loadRuntimeConfig", () => {
       INEEDABOSSAGENT_DB_PATH: "/tmp/custom.sqlite",
       INEEDABOSSAGENT_FEATURE_FLAGS: "contracts, diagnostics ,mode-gate",
       INEEDABOSSAGENT_LOG_LEVEL: "debug",
+      INEEDABOSSAGENT_SCREENPIPE_API_KEY: "sp-test-key",
       INEEDABOSSAGENT_SCREENPIPE_BASE_URL: "http://localhost:3030/",
       INEEDABOSSAGENT_SCREENPIPE_HEALTH_TIMEOUT_MS: "4500",
     });
@@ -66,6 +68,7 @@ describe("loadRuntimeConfig", () => {
         screenpipeSearchBudgetMs: 12_000,
         slowTickMs: 90_000,
       },
+      screenpipeApiKey: "sp-test-key",
       screenpipeBaseUrl: "http://localhost:3030",
     });
     expect(isFeatureFlagEnabled(config, "diagnostics")).toBe(true);
